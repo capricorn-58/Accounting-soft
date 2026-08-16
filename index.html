@@ -742,6 +742,7 @@
         <h2>Backup / Restore Data</h2>
         <p class="muted">Data browser ke localStorage mein save hota hai. Regular backup lena zaroori hai taake data zaya na ho.</p>
         <button onclick="UI.exportData()">⬇️ Backup Download Karein (JSON)</button>
+        <button onclick="UI.emailBackup()" style="margin-left:8px;">📧 Backup Gmail/Email Par Bhejein</button>
         <br><br>
         <div class="field"><label>Backup File Se Restore Karein</label><input type="file" id="restoreFile" accept=".json"></div>
         <button class="danger" onclick="UI.importData()">⬆️ Restore Karein (Ye Purana Data Overwrite Karega)</button>
@@ -2301,6 +2302,45 @@ const UI = {
     a.click();
     URL.revokeObjectURL(url);
     this.toast('Backup download ho gaya','success');
+  },
+  async emailBackup(){
+    const fileName = 'shop-backup-' + today() + '.json';
+    const jsonStr = JSON.stringify(DB, null, 2);
+    const blob = new Blob([jsonStr], {type:'application/json'});
+    const file = new File([blob], fileName, {type:'application/json'});
+    const shareText = 'Shop Management System ka backup - ' + today();
+
+    // Android/Chrome: Web Share API with file -> opens native share sheet
+    // where user can pick Gmail and it attaches automatically.
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({
+          files:[file],
+          title:'Shop Backup - ' + today(),
+          text: shareText
+        });
+        this.toast('Share screen khul gayi - Gmail choose karein','success');
+        return;
+      }catch(err){
+        // user cancelled share sheet - do nothing
+        if(err && err.name === 'AbortError') return;
+      }
+    }
+
+    // Fallback: browsers/devices that don't support file sharing.
+    // Download the file, then open Gmail compose so user can attach manually.
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.toast('Backup download ho gayi - ab Gmail kholein aur ise attach kar dein','success');
+    setTimeout(()=>{
+      window.open('https://mail.google.com/mail/?view=cm&fs=1&su=' +
+        encodeURIComponent('Shop Backup - ' + today()) +
+        '&body=' + encodeURIComponent('Backup file attach karein: ' + fileName + ' (Downloads folder mein hai)'), '_blank');
+    }, 600);
   },
   importData(){
     const file = document.getElementById('restoreFile').files[0];
