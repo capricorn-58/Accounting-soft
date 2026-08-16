@@ -1,0 +1,3020 @@
+<!DOCTYPE html>
+<html lang="ur" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Management System - Motorcycle Parts</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e5f8c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shop MS">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root{
+    --primary:#1e5f8c;
+    --primary-dark:#164a6e;
+    --accent:#2e8b57;
+    --danger:#c0392b;
+    --warn:#d68910;
+    --bg:#f4f6f8;
+    --card:#ffffff;
+    --border:#e0e4e8;
+    --text:#1f2d3a;
+    --text-light:#6b7683;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Segoe UI', Tahoma, Arial, sans-serif;
+    background:var(--bg); color:var(--text); font-size:14px;
+  }
+  #app{display:flex; min-height:100vh;}
+
+  /* Sidebar */
+  #sidebar{
+    width:230px; background:var(--primary-dark); color:#fff; flex-shrink:0;
+    display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; overflow-y:auto; z-index:50;
+  }
+  #sidebar .brand{padding:18px 16px; font-size:16px; font-weight:700; border-bottom:1px solid rgba(255,255,255,.12); background:var(--primary);}
+  #sidebar .brand small{display:block; font-weight:400; font-size:11px; opacity:.85; margin-top:2px;}
+  .nav-item{
+    padding:11px 16px; cursor:pointer; display:flex; align-items:center; gap:10px;
+    border-right:3px solid transparent; opacity:.9; font-size:13.5px;
+  }
+  .nav-item:hover{background:rgba(255,255,255,.08);}
+  .nav-item.active{background:rgba(255,255,255,.14); border-right:3px solid #fff; opacity:1; font-weight:600;}
+  .nav-section{padding:12px 16px 4px; font-size:11px; text-transform:uppercase; opacity:.55; letter-spacing:.5px;}
+
+  #main{margin-left:230px; flex:1; padding:20px 24px; width:calc(100% - 230px);}
+  .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;}
+  .topbar h1{font-size:19px; margin:0;}
+  .topbar .date{color:var(--text-light); font-size:13px;}
+
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-bottom:20px;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px; box-shadow:0 1px 2px rgba(0,0,0,.03);}
+  .card .label{font-size:12px; color:var(--text-light); margin-bottom:6px;}
+  .card .value{font-size:20px; font-weight:700;}
+  .card.green .value{color:var(--accent);}
+  .card.red .value{color:var(--danger);}
+  .card.orange .value{color:var(--warn);}
+  .card.blue .value{color:var(--primary);}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .section-box{background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:18px;}
+  .section-box h2{font-size:15px; margin:0 0 14px; padding-bottom:10px; border-bottom:1px solid var(--border);}
+
+  .row{display:flex; gap:12px; flex-wrap:wrap;}
+  .field{display:flex; flex-direction:column; gap:4px; margin-bottom:10px;}
+  .field label{font-size:12.5px; color:var(--text-light); font-weight:600;}
+  input, select, textarea{
+    padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13.5px; font-family:inherit;
+    background:#fff; color:var(--text);
+  }
+  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--primary);}
+  button{
+    cursor:pointer; border:none; border-radius:6px; padding:9px 16px; font-size:13.5px; font-weight:600;
+    background:var(--primary); color:#fff; transition:.15s;
+  }
+  button:hover{background:var(--primary-dark);}
+  button.secondary{background:#e8ecef; color:var(--text);}
+  button.secondary:hover{background:#d8dde2;}
+  button.danger{background:var(--danger);}
+  button.danger:hover{background:#a53324;}
+  button.small{padding:5px 10px; font-size:12px;}
+  button.success{background:var(--accent);}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  table th, table td{padding:8px 10px; border-bottom:1px solid var(--border); text-align:right;}
+  table th{background:#f0f3f5; font-weight:700; color:var(--text-light); font-size:12px;}
+  table tbody tr:hover{background:#f8fafb;}
+  .table-wrap{overflow-x:auto;}
+  .badge{padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;}
+  .badge.green{background:#e3f5ea; color:var(--accent);}
+  .badge.red{background:#fbe8e6; color:var(--danger);}
+  .badge.orange{background:#fdf0dd; color:var(--warn);}
+  .badge.blue{background:#e4eef6; color:var(--primary);}
+  .alert-banner{background:#fbe8e6; border:1px solid var(--danger); color:var(--danger); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; font-weight:600;}
+  .alert-banner.warn{background:#fdf0dd; border-color:var(--warn); color:var(--warn);}
+
+  .tabs{display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;}
+  .tab-btn{background:#e8ecef; color:var(--text); padding:8px 14px; border-radius:6px; font-size:13px; cursor:pointer;}
+  .tab-btn.active{background:var(--primary); color:#fff;}
+
+  .invoice-items-table input{width:100%; min-width:60px;}
+  .totals-box{margin-top:12px; display:flex; justify-content:flex-end;}
+  .totals-box table{width:320px;}
+  .totals-box td{padding:6px 10px;}
+  .totals-box .grand{font-size:16px; font-weight:800; color:var(--primary);}
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100;
+    align-items:center; justify-content:center;
+  }
+  .modal-overlay.active{display:flex;}
+  .modal-box{background:#fff; border-radius:10px; padding:20px; width:400px; max-width:90vw; max-height:85vh; overflow-y:auto;}
+  .modal-box h3{margin-top:0;}
+
+  .toast{
+    position:fixed; bottom:20px; left:20px; background:#1f2d3a; color:#fff; padding:12px 18px;
+    border-radius:8px; font-size:13.5px; z-index:200; box-shadow:0 4px 12px rgba(0,0,0,.2);
+    display:none;
+  }
+  .toast.show{display:block;}
+  .toast.error{background:var(--danger);}
+  .toast.success{background:var(--accent);}
+
+  .search-box{margin-bottom:12px;}
+  .search-box input{width:280px;}
+
+  .muted{color:var(--text-light); font-size:12px;}
+  .flex-between{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;}
+  .print-area{display:none;}
+  @media print{
+    #sidebar, .topbar, .no-print{display:none !important;}
+    #main{margin-right:0; width:100%;}
+    .print-area{display:block !important;}
+  }
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-thumb{background:#c3cbd2; border-radius:4px;}
+
+  @media (max-width:900px){
+    #sidebar{width:70px;}
+    #sidebar .brand, .nav-item span.txt{display:none;}
+    #main{margin-left:70px; width:calc(100% - 70px);}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="sidebar">
+    <div class="brand">🏍️ Shop Manager<small id="shopNameLabel">Motorcycle Parts</small></div>
+    <div class="nav-section">Mukhya</div>
+    <div class="nav-item active" data-panel="dashboard"><span>📊</span><span class="txt">Dashboard</span></div>
+    <div class="nav-section">Stock &amp; Parties</div>
+    <div class="nav-item" data-panel="items"><span>📦</span><span class="txt">Stock / Items</span></div>
+    <div class="nav-item" data-panel="customers"><span>👤</span><span class="txt">Customers</span></div>
+    <div class="nav-item" data-panel="suppliers"><span>🚚</span><span class="txt">Suppliers</span></div>
+    <div class="nav-item" data-panel="aging"><span>⏰</span><span class="txt">Aging / Promise Dates</span></div>
+    <div class="nav-item" data-panel="stores"><span>🏬</span><span class="txt">Stores</span></div>
+    <div class="nav-section">Transactions</div>
+    <div class="nav-item" data-panel="sale"><span>🧾</span><span class="txt">Sale Invoice</span></div>
+    <div class="nav-item" data-panel="purchase"><span>📥</span><span class="txt">Purchase Invoice</span></div>
+    <div class="nav-item" data-panel="transfer"><span>🔄</span><span class="txt">Inventory Transfer</span></div>
+    <div class="nav-item" data-panel="receipt"><span>💰</span><span class="txt">Wusooli (Receive)</span></div>
+    <div class="nav-item" data-panel="paymentout"><span>💸</span><span class="txt">Adaigi (Pay)</span></div>
+    <div class="nav-item" data-panel="expense"><span>🧮</span><span class="txt">Expenses</span></div>
+    <div class="nav-item" data-panel="cashvoucher"><span>🗒️</span><span class="txt">Cash Voucher</span></div>
+    <div class="nav-item" data-panel="investment"><span>🏦</span><span class="txt">Investment / Withdraw</span></div>
+    <div class="nav-section">Records</div>
+    <div class="nav-item" data-panel="salelist"><span>📋</span><span class="txt">Sale List</span></div>
+    <div class="nav-item" data-panel="purchaselist"><span>📋</span><span class="txt">Purchase List</span></div>
+    <div class="nav-section">Reports &amp; Setup</div>
+    <div class="nav-item" data-panel="reports"><span>📈</span><span class="txt">Reports</span></div>
+    <div class="nav-item" data-panel="settings"><span>⚙️</span><span class="txt">Settings / Backup</span></div>
+  </div>
+
+  <div id="main">
+    <div class="topbar no-print">
+      <h1 id="panelTitle">Dashboard</h1>
+      <div class="date" id="todayDate"></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="cards" id="dashCards"></div>
+      <div class="section-box" id="dashPromiseBox">
+        <div class="flex-between"><h2 style="margin:0;border:none;padding:0">Aging Alerts - Promise Date Maturing / Overdue</h2>
+          <div class="muted">Sirf overdue aur agle 3 din walay dikhaye ja rahe hain — poori list ke liye Aging panel dekhein</div>
+        </div>
+        <div class="table-wrap"><table id="dashPromiseTable"><thead><tr><th>Type</th><th>Naam</th><th>Invoice #</th><th>Baaqaya Amount</th><th>Promise Date</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="section-box">
+        <h2>Halat-e-Hazira - Aakhri 10 Transactions</h2>
+        <div class="table-wrap"><table id="recentTxTable"><thead><tr><th>Tareekh</th><th>Type</th><th>Detail</th><th>Amount</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="section-box">
+        <h2>Kam Stock Alert (Reorder)</h2>
+        <div class="table-wrap"><table id="lowStockTable"><thead><tr><th>Item</th><th>Current Stock</th><th>Min Stock</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ITEMS -->
+    <div class="panel" id="panel-items">
+      <div class="section-box">
+        <h2 id="itemFormTitle">Naya Item Add Karein</h2>
+        <form id="itemForm">
+          <input type="hidden" id="itemId">
+          <div class="row">
+            <div class="field"><label>Item Name *</label><input type="text" id="itemName" required></div>
+            <div class="field"><label>Item Name (Urdu)</label><input type="text" id="itemNameUrdu" dir="rtl" placeholder="اردو نام"></div>
+            <div class="field"><label>Item Code</label><input type="text" id="itemCode" placeholder="SKU / Code"></div>
+            <div class="field"><label>Unit</label><input type="text" id="itemUnit" placeholder="Pcs / Set" value="Pcs"></div>
+            <div class="field"><label>Purchase Price</label><input type="number" step="0.01" id="itemPurchasePrice" required></div>
+            <div class="field"><label>Sale Price</label><input type="number" step="0.01" id="itemSalePrice" required></div>
+            <div class="field"><label>Minimum Stock (Alert)</label><input type="number" step="0.01" id="itemMinStock" value="2"></div>
+          </div>
+          <div class="row" id="itemOpeningStockContainer"></div>
+          <p class="muted" id="itemOpeningStockHint">Opening Stock har store ke liye alag likhein.</p>
+          <button type="submit">Save Item</button>
+          <button type="button" class="secondary" onclick="UI.resetItemForm()">Cancel</button>
+        </form>
+      </div>
+      <div class="section-box">
+        <div class="flex-between"><h2 style="margin:0;border:none;padding:0">Sare Items</h2>
+          <div class="search-box"><input type="text" id="itemSearch" placeholder="Naam, Code ya Urdu naam se search..." oninput="UI.renderItems()"></div>
+        </div>
+        <div class="row no-print" style="align-items:center">
+          <button type="button" class="secondary small" onclick="ImportExport.exportItemsCSV()">⬇️ Contacts/List CSV Export</button>
+          <div class="field"><label>Import (CSV / Excel / PDF)</label><input type="file" id="itemImportFile" accept=".csv,.xlsx,.xls,.pdf"></div>
+          <button type="button" class="secondary small" onclick="ImportExport.importItems()">⬆️ Items Import Karein</button>
+        </div>
+        <div class="table-wrap"><table id="itemsTable">
+          <thead id="itemsTableHead"><tr><th>Name</th><th>Urdu Name</th><th>Code</th><th>Unit</th><th>Purchase Price</th><th>Sale Price</th><th>Current Stock</th><th>Stock Value</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS -->
+    <div class="panel" id="panel-customers">
+      <div class="section-box">
+        <h2 id="custFormTitle">Naya Customer Add Karein</h2>
+        <form id="custForm">
+          <input type="hidden" id="custId">
+          <div class="row">
+            <div class="field"><label>Naam *</label><input type="text" id="custName" required></div>
+            <div class="field"><label>Phone</label><input type="text" id="custPhone"></div>
+            <div class="field"><label>Address</label><input type="text" id="custAddress"></div>
+            <div class="field"><label>Opening Balance (Udhaar)</label><input type="number" step="0.01" id="custOpening" value="0"></div>
+          </div>
+          <button type="submit">Save Customer</button>
+          <button type="button" class="secondary" onclick="UI.resetCustForm()">Cancel</button>
+        </form>
+      </div>
+      <div class="section-box">
+        <div class="flex-between"><h2 style="margin:0;border:none;padding:0">Sare Customers</h2>
+          <div class="search-box"><input type="text" id="custSearch" placeholder="Customer search..." oninput="UI.renderCustomers()"></div>
+        </div>
+        <div class="row no-print" style="align-items:center">
+          <button type="button" class="secondary small" onclick="ImportExport.exportCustomersCSV()">⬇️ Contact List CSV Export</button>
+          <div class="field"><label>Import (CSV / Excel / PDF)</label><input type="file" id="custImportFile" accept=".csv,.xlsx,.xls,.pdf"></div>
+          <button type="button" class="secondary small" onclick="ImportExport.importCustomers()">⬆️ Customers Import Karein</button>
+        </div>
+        <div class="table-wrap"><table id="custTable">
+          <thead><tr><th>Naam</th><th>Phone</th><th>Balance (Wo Aap Ko Denay Hain)</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- SUPPLIERS -->
+    <div class="panel" id="panel-suppliers">
+      <div class="section-box">
+        <h2 id="suppFormTitle">Naya Supplier Add Karein</h2>
+        <form id="suppForm">
+          <input type="hidden" id="suppId">
+          <div class="row">
+            <div class="field"><label>Naam *</label><input type="text" id="suppName" required></div>
+            <div class="field"><label>Phone</label><input type="text" id="suppPhone"></div>
+            <div class="field"><label>Address</label><input type="text" id="suppAddress"></div>
+            <div class="field"><label>Opening Balance (Aap Ne Denay Hain)</label><input type="number" step="0.01" id="suppOpening" value="0"></div>
+          </div>
+          <button type="submit">Save Supplier</button>
+          <button type="button" class="secondary" onclick="UI.resetSuppForm()">Cancel</button>
+        </form>
+      </div>
+      <div class="section-box">
+        <div class="flex-between"><h2 style="margin:0;border:none;padding:0">Sare Suppliers</h2>
+          <div class="search-box"><input type="text" id="suppSearch" placeholder="Supplier search..." oninput="UI.renderSuppliers()"></div>
+        </div>
+        <div class="row no-print" style="align-items:center">
+          <button type="button" class="secondary small" onclick="ImportExport.exportSuppliersCSV()">⬇️ Contact List CSV Export</button>
+          <div class="field"><label>Import (CSV / Excel / PDF)</label><input type="file" id="suppImportFile" accept=".csv,.xlsx,.xls,.pdf"></div>
+          <button type="button" class="secondary small" onclick="ImportExport.importSuppliers()">⬆️ Suppliers Import Karein</button>
+        </div>
+        <div class="table-wrap"><table id="suppTable">
+          <thead><tr><th>Naam</th><th>Phone</th><th>Balance (Aap Ne Denay Hain)</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- AGING / PROMISE DATES -->
+    <div class="panel" id="panel-aging">
+      <div id="agingAlertBox"></div>
+      <div class="tabs no-print">
+        <div class="tab-btn active" data-aging="promise">Promise Date Tracker</div>
+        <div class="tab-btn" data-aging="custaging">Customers Aging</div>
+        <div class="tab-btn" data-aging="suppaging">Suppliers Aging</div>
+      </div>
+
+      <div class="agingtab" id="agingtab-promise">
+        <div class="section-box">
+          <div class="flex-between"><h2 style="margin:0;border:none;padding:0">Promise Date Tracker (Wada Ki Tareekh)</h2>
+            <div class="muted">Overdue = Laal, Aaj/3 din mein Due = Orange, Aage = Green</div>
+          </div>
+          <p class="muted">Ye list un credit Sale/Purchase invoices ki hai jin par Promise Date di gayi hai aur amount abhi tak baaqi hai.</p>
+          <div class="table-wrap"><table id="promiseTable">
+            <thead><tr><th>Type</th><th>Naam</th><th>Invoice #</th><th>Invoice Tareekh</th><th>Baaqaya Amount</th><th>Promise Date</th><th>Status</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="agingtab" id="agingtab-custaging" style="display:none">
+        <div class="section-box">
+          <h2>Customers Aging Summary (Kitne Purane Baaqaya Hain)</h2>
+          <div class="table-wrap"><table id="custAgingTable">
+            <thead><tr><th>Customer</th><th>0-30 Din</th><th>31-60 Din</th><th>61-90 Din</th><th>90+ Din</th><th>Total Baaqaya</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="agingtab" id="agingtab-suppaging" style="display:none">
+        <div class="section-box">
+          <h2>Suppliers Aging Summary (Kitne Purane Baaqaya Hain)</h2>
+          <div class="table-wrap"><table id="suppAgingTable">
+            <thead><tr><th>Supplier</th><th>0-30 Din</th><th>31-60 Din</th><th>61-90 Din</th><th>90+ Din</th><th>Total Baaqaya</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STORES -->
+    <div class="panel" id="panel-stores">
+      <div class="section-box">
+        <h2 id="storeFormTitle">Naya Store Add Karein</h2>
+        <form id="storeForm">
+          <input type="hidden" id="storeId">
+          <div class="row">
+            <div class="field"><label>Store Ka Naam * (e.g. Shop, Home Store)</label><input type="text" id="storeName" required></div>
+          </div>
+          <button type="submit">Store Save Karein</button>
+          <button type="button" class="secondary" onclick="UI.resetStoreForm()">Cancel</button>
+        </form>
+      </div>
+      <div class="section-box">
+        <h2 style="margin:0;border:none;padding:0">Sare Stores</h2>
+        <div class="table-wrap"><table id="storesTable">
+          <thead><tr><th>Naam</th><th>Total Stock Value</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- SALE INVOICE -->
+    <div class="panel" id="panel-sale">
+      <div class="section-box">
+        <div class="flex-between">
+          <h2 style="margin:0;border:none;padding:0">Sale Invoice</h2>
+          <div class="muted">Invoice #: <b id="saleInvNoDisplay"></b></div>
+        </div>
+        <input type="hidden" id="saleEditId">
+        <div class="row">
+          <div class="field"><label>Tareekh</label><input type="date" id="saleDate"></div>
+          <div class="field" style="min-width:220px"><label>Customer</label>
+            <select id="saleCustomer"></select>
+          </div>
+          <div class="field" style="min-width:180px"><label>Store</label>
+            <select id="saleStore" onchange="UI.onSaleStoreChange()"></select>
+          </div>
+          <div class="field"><label>Sale Type</label>
+            <select id="saleType" onchange="UI.onSaleTypeChange()"><option value="cash">Cash</option><option value="credit">Credit / Udhaar</option></select>
+          </div>
+          <div class="field" id="salePromiseDateField" style="display:none"><label>Promise Date (Wada Ki Tareekh)</label><input type="date" id="salePromiseDate"></div>
+          <div class="field"><label>Print Language</label>
+            <select id="salePrintLang"><option value="en">English</option><option value="ur">Urdu</option></select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="invoice-items-table" id="saleItemsTable">
+            <thead><tr><th style="width:26%">Item</th><th>Available Stock</th><th>Qty</th><th>Rate</th><th>Amount</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <button type="button" class="secondary small" onclick="UI.addSaleRow()">+ Item Row Add Karein</button>
+        <div class="totals-box">
+          <table>
+            <tr><td>Total</td><td id="saleSubtotal">0</td></tr>
+            <tr><td>Discount</td><td><input type="number" step="0.01" id="saleDiscount" value="0" style="width:120px" oninput="UI.calcSaleTotals()"></td></tr>
+            <tr class="grand"><td>Grand Total</td><td id="saleGrandTotal">0</td></tr>
+            <tr><td>Paid Amount (Cash)</td><td><input type="number" step="0.01" id="salePaid" value="0" style="width:120px" oninput="UI.calcSaleTotals()"></td></tr>
+            <tr><td>Baqaya (Udhaar)</td><td id="saleBalance" style="font-weight:700;color:var(--danger)">0</td></tr>
+          </table>
+        </div>
+        <div class="field"><label>Note</label><input type="text" id="saleNote"></div>
+        <button type="button" onclick="UI.saveSale()">Invoice Save Karein</button>
+        <button type="button" class="success" onclick="UI.saveSale('thermal')">Save + Chota Print</button>
+        <button type="button" class="success" onclick="UI.saveSale('a4')">Save + A4 Print</button>
+        <button type="button" class="secondary" onclick="UI.resetSaleForm()">🆕 Naya Invoice</button>
+      </div>
+
+      <div class="section-box">
+        <div class="flex-between"><h2 style="margin:0;border:none;padding:0">Sale Invoices (New / Edit / Delete)</h2>
+          <div class="search-box"><input type="text" id="saleQuickSearch" placeholder="Customer/Invoice# search..." oninput="UI.renderSaleQuickList()"></div>
+        </div>
+        <div class="table-wrap"><table id="saleQuickTable">
+          <thead><tr><th>Inv#</th><th>Tareekh</th><th>Customer</th><th>Total</th><th>Paid</th><th>Baqaya</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- PURCHASE INVOICE -->
+    <div class="panel" id="panel-purchase">
+      <div class="section-box">
+        <div class="flex-between">
+          <h2 style="margin:0;border:none;padding:0">Purchase Invoice</h2>
+          <div class="muted">PO #: <b id="poNoDisplay"></b></div>
+        </div>
+        <input type="hidden" id="purchEditId">
+        <div class="row">
+          <div class="field"><label>Tareekh</label><input type="date" id="purchDate"></div>
+          <div class="field" style="min-width:220px"><label>Supplier</label>
+            <select id="purchSupplier"></select>
+          </div>
+          <div class="field" style="min-width:180px"><label>Store (Maal Kahan Aayega)</label>
+            <select id="purchStore" onchange="UI.onPurchStoreChange()"></select>
+          </div>
+          <div class="field"><label>Purchase Type</label>
+            <select id="purchType" onchange="UI.onPurchTypeChange()"><option value="cash">Cash</option><option value="credit">Credit / Udhaar</option></select>
+          </div>
+          <div class="field" id="purchPromiseDateField" style="display:none"><label>Promise Date (Wada Ki Tareekh)</label><input type="date" id="purchPromiseDate"></div>
+          <div class="field"><label>Print Language</label>
+            <select id="purchPrintLang"><option value="en">English</option><option value="ur">Urdu</option></select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="invoice-items-table" id="purchItemsTable">
+            <thead><tr><th style="width:26%">Item</th><th>Current Stock</th><th>Qty</th><th>Rate</th><th>Amount</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <button type="button" class="secondary small" onclick="UI.addPurchRow()">+ Item Row Add Karein</button>
+        <div class="totals-box">
+          <table>
+            <tr><td>Total</td><td id="purchSubtotal">0</td></tr>
+            <tr><td>Discount</td><td><input type="number" step="0.01" id="purchDiscount" value="0" style="width:120px" oninput="UI.calcPurchTotals()"></td></tr>
+            <tr class="grand"><td>Grand Total</td><td id="purchGrandTotal">0</td></tr>
+            <tr><td>Paid Amount (Cash)</td><td><input type="number" step="0.01" id="purchPaid" value="0" style="width:120px" oninput="UI.calcPurchTotals()"></td></tr>
+            <tr><td>Baqaya (Aap Ne Denay Hain)</td><td id="purchBalance" style="font-weight:700;color:var(--danger)">0</td></tr>
+          </table>
+        </div>
+        <div class="field"><label>Note</label><input type="text" id="purchNote"></div>
+        <button type="button" onclick="UI.savePurchase()">Invoice Save Karein</button>
+        <button type="button" class="success" onclick="UI.savePurchase('thermal')">Save + Chota Print</button>
+        <button type="button" class="success" onclick="UI.savePurchase('a4')">Save + A4 Print</button>
+        <button type="button" class="secondary" onclick="UI.resetPurchForm()">🆕 Naya Invoice</button>
+      </div>
+
+      <div class="section-box">
+        <div class="flex-between"><h2 style="margin:0;border:none;padding:0">Purchase Invoices (New / Edit / Delete)</h2>
+          <div class="search-box"><input type="text" id="purchQuickSearch" placeholder="Supplier/PO# search..." oninput="UI.renderPurchQuickList()"></div>
+        </div>
+        <div class="table-wrap"><table id="purchQuickTable">
+          <thead><tr><th>PO#</th><th>Tareekh</th><th>Supplier</th><th>Total</th><th>Paid</th><th>Baqaya</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- INVENTORY TRANSFER -->
+    <div class="panel" id="panel-transfer">
+      <div class="section-box">
+        <h2>Stock Transfer (Store Se Store)</h2>
+        <form id="transferForm">
+          <div class="row">
+            <div class="field"><label>Tareekh</label><input type="date" id="trDate"></div>
+            <div class="field" style="min-width:220px"><label>Item</label><select id="trItem" onchange="UI.onTransferItemChange()"></select></div>
+            <div class="field"><label>From Store</label><select id="trFromStore" onchange="UI.onTransferItemChange()"></select></div>
+            <div class="field"><label>To Store</label><select id="trToStore"></select></div>
+            <div class="field"><label>Qty</label><input type="number" step="0.01" id="trQty" required></div>
+          </div>
+          <div class="muted" id="trStockHint" style="margin-bottom:8px"></div>
+          <div class="field"><label>Note</label><input type="text" id="trNote"></div>
+          <button type="submit">Transfer Save Karein</button>
+        </form>
+      </div>
+      <div class="section-box">
+        <div class="flex-between"><h2 style="margin:0;border:none;padding:0">Store-Wise Current Stock</h2></div>
+        <div class="table-wrap"><table id="storeStockTable"></table></div>
+      </div>
+      <div class="section-box">
+        <h2>Transfer History</h2>
+        <div class="table-wrap"><table id="transferTable"><thead><tr><th>Tareekh</th><th>Item</th><th>From</th><th>To</th><th>Qty</th><th>Note</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- RECEIPT (money in from customer) -->
+    <div class="panel" id="panel-receipt">
+      <div class="section-box">
+        <h2>Customer Se Wusooli (Payment Receive)</h2>
+        <form id="receiptForm">
+          <div class="row">
+            <div class="field"><label>Tareekh</label><input type="date" id="recDate"></div>
+            <div class="field" style="min-width:220px"><label>Customer</label><select id="recCustomer"></select></div>
+            <div class="field"><label>Amount</label><input type="number" step="0.01" id="recAmount" required></div>
+            <div class="field"><label>Method</label><select id="recMethod"><option>Cash</option><option>Bank</option><option>Easypaisa/JazzCash</option></select></div>
+          </div>
+          <div class="field"><label>Note</label><input type="text" id="recNote"></div>
+          <button type="submit">Wusooli Save Karein</button>
+        </form>
+      </div>
+      <div class="section-box">
+        <h2>Wusooli History</h2>
+        <div class="table-wrap"><table id="recTable"><thead><tr><th>Tareekh</th><th>Customer</th><th>Amount</th><th>Method</th><th>Note</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- PAYMENT OUT (money to supplier) -->
+    <div class="panel" id="panel-paymentout">
+      <div class="section-box">
+        <h2>Supplier Ko Adaigi (Payment Send)</h2>
+        <form id="payoutForm">
+          <div class="row">
+            <div class="field"><label>Tareekh</label><input type="date" id="payDate"></div>
+            <div class="field" style="min-width:220px"><label>Supplier</label><select id="paySupplier"></select></div>
+            <div class="field"><label>Amount</label><input type="number" step="0.01" id="payAmount" required></div>
+            <div class="field"><label>Method</label><select id="payMethod"><option>Cash</option><option>Bank</option><option>Easypaisa/JazzCash</option></select></div>
+          </div>
+          <div class="field"><label>Note</label><input type="text" id="payNote"></div>
+          <button type="submit">Adaigi Save Karein</button>
+        </form>
+      </div>
+      <div class="section-box">
+        <h2>Adaigi History</h2>
+        <div class="table-wrap"><table id="payTable"><thead><tr><th>Tareekh</th><th>Supplier</th><th>Amount</th><th>Method</th><th>Note</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- EXPENSES -->
+    <div class="panel" id="panel-expense">
+      <div class="section-box">
+        <h2>Naya Expense</h2>
+        <form id="expForm">
+          <div class="row">
+            <div class="field"><label>Tareekh</label><input type="date" id="expDate"></div>
+            <div class="field"><label>Category</label>
+              <select id="expCategory">
+                <option>Dukaan Kiraya</option><option>Bijli Bill</option><option>Transport / Freight</option>
+                <option>Staff Salary</option><option>Chai/Refreshment</option><option>Maintenance</option>
+                <option>Marketing</option><option>Other</option>
+              </select>
+            </div>
+            <div class="field"><label>Amount</label><input type="number" step="0.01" id="expAmount" required></div>
+          </div>
+          <div class="field"><label>Note</label><input type="text" id="expNote"></div>
+          <button type="submit">Expense Save Karein</button>
+        </form>
+      </div>
+      <div class="section-box">
+        <h2>Expense History</h2>
+        <div class="table-wrap"><table id="expTable"><thead><tr><th>Tareekh</th><th>Category</th><th>Amount</th><th>Note</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- CASH VOUCHER -->
+    <div class="panel" id="panel-cashvoucher">
+      <div class="section-box">
+        <h2>Cash General Voucher</h2>
+        <form id="cvForm">
+          <div class="row">
+            <div class="field"><label>Tareekh</label><input type="date" id="cvDate"></div>
+            <div class="field"><label>Type</label><select id="cvType"><option value="in">Cash IN</option><option value="out">Cash OUT</option></select></div>
+            <div class="field"><label>Amount</label><input type="number" step="0.01" id="cvAmount" required></div>
+          </div>
+          <div class="field"><label>Note / Reason</label><input type="text" id="cvNote" required></div>
+          <button type="submit">Voucher Save Karein</button>
+        </form>
+      </div>
+      <div class="section-box">
+        <h2>Voucher History</h2>
+        <div class="table-wrap"><table id="cvTable"><thead><tr><th>Tareekh</th><th>Type</th><th>Amount</th><th>Note</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- INVESTMENT / WITHDRAW -->
+    <div class="panel" id="panel-investment">
+      <div class="section-box">
+        <h2>Investment / Withdraw (Sarmaya Dalna Ya Nikalna)</h2>
+        <form id="investForm">
+          <div class="row">
+            <div class="field"><label>Tareekh</label><input type="date" id="investDate"></div>
+            <div class="field"><label>Type</label><select id="investType"><option value="investment">Investment (Sarmaya Dalna)</option><option value="withdraw">Withdraw (Sarmaya Nikalna)</option></select></div>
+            <div class="field"><label>Amount</label><input type="number" step="0.01" id="investAmount" required></div>
+          </div>
+          <div class="field"><label>Note / Reason</label><input type="text" id="investNote"></div>
+          <button type="submit">Save Karein</button>
+        </form>
+      </div>
+      <div class="section-box">
+        <div class="flex-between"><h2 style="margin:0;border:none;padding:0">Investment History</h2>
+          <div class="muted">Net Investment: <b id="investNetTotal">Rs 0</b></div>
+        </div>
+        <div class="table-wrap"><table id="investTable"><thead><tr><th>Tareekh</th><th>Type</th><th>Amount</th><th>Note</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- SALE LIST -->
+    <div class="panel" id="panel-salelist">
+      <div class="section-box">
+        <div class="flex-between"><h2 style="margin:0;border:none;padding:0">Sale Invoices</h2>
+          <div class="search-box"><input type="text" id="saleListSearch" placeholder="Customer/Invoice# search..." oninput="UI.renderSaleList()"></div>
+        </div>
+        <div class="table-wrap"><table id="saleListTable">
+          <thead><tr><th>Inv#</th><th>Tareekh</th><th>Customer</th><th>Total</th><th>Paid</th><th>Baqaya</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- PURCHASE LIST -->
+    <div class="panel" id="panel-purchaselist">
+      <div class="section-box">
+        <div class="flex-between"><h2 style="margin:0;border:none;padding:0">Purchase Invoices</h2>
+          <div class="search-box"><input type="text" id="purchListSearch" placeholder="Supplier/PO# search..." oninput="UI.renderPurchList()"></div>
+        </div>
+        <div class="table-wrap"><table id="purchListTable">
+          <thead><tr><th>PO#</th><th>Tareekh</th><th>Supplier</th><th>Total</th><th>Paid</th><th>Baqaya</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="panel" id="panel-reports">
+      <div class="tabs no-print">
+        <div class="tab-btn active" data-rep="summary">Business Summary</div>
+        <div class="tab-btn" data-rep="salerep">Sale Report</div>
+        <div class="tab-btn" data-rep="prodhist">Product Sale History</div>
+        <div class="tab-btn" data-rep="purchrep">Purchase Report</div>
+        <div class="tab-btn" data-rep="prodpurchhist">Product Purchase History</div>
+        <div class="tab-btn" data-rep="custledger">Customer Ledger</div>
+        <div class="tab-btn" data-rep="suppledger">Supplier Ledger</div>
+        <div class="tab-btn" data-rep="stockrep">Stock Report</div>
+        <div class="tab-btn" data-rep="income">Income Statement</div>
+        <div class="tab-btn" data-rep="trial">Trial Balance</div>
+        <div class="tab-btn" data-rep="balance">Balance Sheet</div>
+      </div>
+      <div class="section-box no-print" id="repFilterBox">
+        <div class="row" id="repFilters"></div>
+        <button onclick="Reports.run()">Report Dekhein</button>
+        <button class="secondary" onclick="window.print()">🖨️ Print</button>
+      </div>
+      <div class="section-box" id="repOutput"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel" id="panel-settings">
+      <div class="section-box">
+        <h2>Company Profile (Bill Ke Header Par Nazar Aayega)</h2>
+        <div class="row">
+          <div class="field"><label>Shop Ka Naam *</label><input type="text" id="setShopName"></div>
+          <div class="field" style="min-width:260px"><label>Address</label><input type="text" id="setShopAddress" placeholder="Dukaan ka pura address"></div>
+          <div class="field"><label>Phone Number</label><input type="text" id="setShopPhone" placeholder="03xx-xxxxxxx"></div>
+          <div class="field"><label>Email (optional)</label><input type="text" id="setShopEmail"></div>
+        </div>
+        <div class="field" style="min-width:260px"><label>Bill Ke Neeche Note (Footer)</label><input type="text" id="setShopFooter"></div>
+        <div class="row" style="align-items:center">
+          <div class="field"><label>Company Logo (Bill Par Print Hoga)</label><input type="file" id="setShopLogoFile" accept="image/*" onchange="UI.onLogoFileChange(event)"></div>
+          <div class="field"><label>&nbsp;</label><img id="setShopLogoPreview" src="" style="display:none;max-height:60px;max-width:160px;border:1px solid var(--border);border-radius:6px;padding:4px"></div>
+          <div class="field"><label>&nbsp;</label><button type="button" class="secondary small" onclick="UI.removeLogo()">Logo Hataayein</button></div>
+        </div>
+        <button onclick="UI.saveSettings()">Company Profile Save Karein</button>
+      </div>
+      <div class="section-box">
+        <h2>Day Close / Permission Settings</h2>
+        <div class="row">
+          <div class="field"><label>Closing Date (Is Tareekh Tak Sab Records Lock)</label><input type="date" id="setClosingDate"></div>
+          <div class="field"><label>&nbsp;</label><button type="button" class="secondary small" onclick="UI.clearClosingDate()">Closing Date Hataayein</button></div>
+        </div>
+        <p class="muted">Closing date set karne se us tareekh tak (aur us se pehle) ke tamam records add/edit/delete nahi ho sakenge. Naya kaam sirf closing date ke baad ki tareekh mein hoga.</p>
+        <div class="row" style="align-items:center">
+          <div class="field"><label><input type="checkbox" id="setAllowNegativeStock" style="width:auto;vertical-align:middle"> Negative Stock Allow Karein</label></div>
+        </div>
+        <p class="muted">Agar ye ON hai to stock khatam hone ke bawajood bhi sale ki ja sakegi (stock manfi/negative dikhega). OFF hone par system stock kam honay par sale rok dega.</p>
+        <button onclick="UI.saveSettings()">Settings Save Karein</button>
+      </div>
+      <div class="section-box">
+        <h2>Invoice / Numbering Settings</h2>
+        <div class="row">
+          <div class="field"><label>Opening Cash (Jab System Shuru Kiya)</label><input type="number" step="0.01" id="setOpeningCash"></div>
+          <div class="field"><label>Next Invoice #</label><input type="number" id="setNextInv"></div>
+          <div class="field"><label>Next PO #</label><input type="number" id="setNextPO"></div>
+        </div>
+        <button onclick="UI.saveSettings()">Settings Save Karein</button>
+      </div>
+      <div class="section-box">
+        <h2>Backup / Restore Data</h2>
+        <p class="muted">Data browser ke localStorage mein save hota hai. Regular backup lena zaroori hai taake data zaya na ho.</p>
+        <button onclick="UI.exportData()">⬇️ Backup Download Karein (JSON)</button>
+        <br><br>
+        <div class="field"><label>Backup File Se Restore Karein</label><input type="file" id="restoreFile" accept=".json"></div>
+        <button class="danger" onclick="UI.importData()">⬆️ Restore Karein (Ye Purana Data Overwrite Karega)</button>
+      </div>
+      <div class="section-box">
+        <h2>Danger Zone</h2>
+        <button class="danger" onclick="UI.clearAllData()">🗑️ Sara Data Delete Karein</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <h3 id="confirmTitle">Confirm</h3>
+    <p id="confirmMsg"></p>
+    <div style="text-align:left;margin-top:14px;">
+      <button class="secondary" onclick="UI.closeConfirm()">Cancel</button>
+      <button class="danger" id="confirmYesBtn">Haan, Karein</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   DATA LAYER - localStorage based, everything recomputed
+   from raw transaction logs to guarantee accuracy.
+   ========================================================= */
+const DB_KEY = 'shopMgmtDB_v1';
+
+function defaultDB(){
+  return {
+    settings:{ shopName:'Motorcycle Spare Parts', shopAddress:'', shopPhone:'', shopEmail:'', shopFooter:'Shukriya! Dobara Tashreef Laayen.', openingCash:0, nextInv:1, nextPO:1, closingDate:'', allowNegativeStock:false, shopLogo:'' },
+    items:[], customers:[], suppliers:[],
+    stores:[ {id:'store_shop', name:'Shop'}, {id:'store_home', name:'Home Store'} ],
+    transfers:[],
+    sales:[], purchases:[], receipts:[], paymentsOut:[], expenses:[], cashVouchers:[], investments:[]
+  };
+}
+
+let DB = loadDB();
+migrateStores();
+
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(DB_KEY);
+    if(!raw) return defaultDB();
+    const parsed = JSON.parse(raw);
+    // merge with defaults to avoid missing keys on upgrade
+    return Object.assign(defaultDB(), parsed);
+  }catch(e){
+    console.error('DB load error', e);
+    return defaultDB();
+  }
+}
+
+// One-time migration: ensure stores exist and old single "openingStock" per item
+// gets converted into per-store opening stock (assigned to the first store).
+function migrateStores(){
+  if(!Array.isArray(DB.stores) || DB.stores.length===0){
+    DB.stores = [ {id:'store_shop', name:'Shop'}, {id:'store_home', name:'Home Store'} ];
+  }
+  if(!Array.isArray(DB.transfers)) DB.transfers = [];
+  if(!Array.isArray(DB.investments)) DB.investments = [];
+  if(DB.settings.closingDate===undefined) DB.settings.closingDate = '';
+  if(DB.settings.allowNegativeStock===undefined) DB.settings.allowNegativeStock = false;
+  if(DB.settings.shopLogo===undefined) DB.settings.shopLogo = '';
+  const firstStoreId = DB.stores[0].id;
+  let changed = false;
+  DB.items.forEach(it=>{
+    if(!it.openingStockByStore){
+      it.openingStockByStore = { [firstStoreId]: Number(it.openingStock)||0 };
+      changed = true;
+    }
+  });
+  if(changed) saveDB();
+}
+
+function saveDB(){
+  localStorage.setItem(DB_KEY, JSON.stringify(DB));
+}
+
+function uid(){
+  return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+function fmt(n){
+  n = Number(n)||0;
+  return n.toLocaleString('en-PK', {minimumFractionDigits:0, maximumFractionDigits:2});
+}
+function today(){ return new Date().toISOString().slice(0,10); }
+
+/* =========================================================
+   CORE CALCULATION ENGINE (single source of truth)
+   ========================================================= */
+const Calc = {
+  itemById(id){ return DB.items.find(i=>i.id===id); },
+  customerById(id){ return DB.customers.find(c=>c.id===id); },
+  supplierById(id){ return DB.suppliers.find(s=>s.id===id); },
+  storeById(id){ return DB.stores.find(s=>s.id===id); },
+  defaultStoreId(){ return DB.stores[0] ? DB.stores[0].id : ''; },
+  // Every sale/purchase/transfer should have a storeId; older records (saved before
+  // stores existed) fall back to the first/default store so nothing "disappears".
+  effStoreId(obj){ return obj.storeId || this.defaultStoreId(); },
+
+  // Stock qty currently available for an item. Pass storeId to get stock at a
+  // single store; omit it to get the total across all stores.
+  stockQty(itemId, storeId){
+    const item = this.itemById(itemId);
+    if(!item) return 0;
+    if(storeId){
+      let qty = Number((item.openingStockByStore||{})[storeId])||0;
+      DB.purchases.forEach(p=>{ if(this.effStoreId(p)===storeId) p.items.forEach(li=>{ if(li.itemId===itemId) qty += Number(li.qty)||0; }); });
+      DB.sales.forEach(s=>{ if(this.effStoreId(s)===storeId) s.items.forEach(li=>{ if(li.itemId===itemId) qty -= Number(li.qty)||0; }); });
+      DB.transfers.forEach(t=>{
+        if(t.itemId!==itemId) return;
+        if(t.toStoreId===storeId) qty += Number(t.qty)||0;
+        if(t.fromStoreId===storeId) qty -= Number(t.qty)||0;
+      });
+      return qty;
+    }
+    return DB.stores.reduce((sum,st)=> sum + this.stockQty(itemId, st.id), 0);
+  },
+  stockValue(storeId){
+    return DB.items.reduce((sum,it)=> sum + this.stockQty(it.id, storeId) * (Number(it.purchasePrice)||0), 0);
+  },
+  // Customer receivable balance: positive = customer owes shop
+  customerBalance(custId){
+    const c = this.customerById(custId);
+    if(!c) return 0;
+    let bal = Number(c.openingBalance)||0;
+    DB.sales.forEach(s=>{ if(s.customerId===custId){ bal += Number(s.grandTotal)||0; bal -= Number(s.paidAmount)||0; } });
+    DB.receipts.forEach(r=>{ if(r.customerId===custId) bal -= Number(r.amount)||0; });
+    return bal;
+  },
+  totalReceivable(){
+    return DB.customers.reduce((sum,c)=> sum + this.customerBalance(c.id), 0);
+  },
+  // Supplier payable balance: positive = shop owes supplier
+  supplierBalance(suppId){
+    const s = this.supplierById(suppId);
+    if(!s) return 0;
+    let bal = Number(s.openingBalance)||0;
+    DB.purchases.forEach(p=>{ if(p.supplierId===suppId){ bal += Number(p.grandTotal)||0; bal -= Number(p.paidAmount)||0; } });
+    DB.paymentsOut.forEach(r=>{ if(r.supplierId===suppId) bal -= Number(r.amount)||0; });
+    return bal;
+  },
+  totalPayable(){
+    return DB.suppliers.reduce((sum,s)=> sum + this.supplierBalance(s.id), 0);
+  },
+  // Cash in hand
+  cashInHand(){
+    let cash = Number(DB.settings.openingCash)||0;
+    DB.sales.forEach(s=> cash += Number(s.paidAmount)||0);
+    DB.receipts.forEach(r=> cash += Number(r.amount)||0);
+    DB.cashVouchers.forEach(v=>{ if(v.type==='in') cash += Number(v.amount)||0; });
+    (DB.investments||[]).forEach(v=>{ if(v.type==='investment') cash += Number(v.amount)||0; });
+    DB.purchases.forEach(p=> cash -= Number(p.paidAmount)||0);
+    DB.paymentsOut.forEach(r=> cash -= Number(r.amount)||0);
+    DB.expenses.forEach(e=> cash -= Number(e.amount)||0);
+    DB.cashVouchers.forEach(v=>{ if(v.type==='out') cash -= Number(v.amount)||0; });
+    (DB.investments||[]).forEach(v=>{ if(v.type==='withdraw') cash -= Number(v.amount)||0; });
+    return cash;
+  },
+  totalInvestment(){
+    let net = 0;
+    (DB.investments||[]).forEach(v=>{ net += (v.type==='investment' ? Number(v.amount)||0 : -(Number(v.amount)||0)); });
+    return net;
+  },
+  // Sales / Purchase totals within optional date range [from,to] inclusive, yyyy-mm-dd strings
+  inRange(dateStr, from, to){
+    if(from && dateStr < from) return false;
+    if(to && dateStr > to) return false;
+    return true;
+  },
+  salesTotal(from,to){
+    return DB.sales.filter(s=>this.inRange(s.date,from,to)).reduce((sum,s)=>sum+(Number(s.grandTotal)||0),0);
+  },
+  purchasesTotal(from,to){
+    return DB.purchases.filter(p=>this.inRange(p.date,from,to)).reduce((sum,p)=>sum+(Number(p.grandTotal)||0),0);
+  },
+  expensesTotal(from,to){
+    return DB.expenses.filter(e=>this.inRange(e.date,from,to)).reduce((sum,e)=>sum+(Number(e.amount)||0),0);
+  },
+  // Cost of goods sold within range (uses item's current purchase price as cost basis)
+  cogs(from,to){
+    let cost = 0;
+    DB.sales.filter(s=>this.inRange(s.date,from,to)).forEach(s=>{
+      s.items.forEach(li=>{
+        const item = this.itemById(li.itemId);
+        const cp = item ? (Number(item.purchasePrice)||0) : 0;
+        cost += cp * (Number(li.qty)||0);
+      });
+    });
+    return cost;
+  },
+  netProfit(from,to){
+    return this.salesTotal(from,to) - this.cogs(from,to) - this.expensesTotal(from,to);
+  },
+  nextInvoiceNo(){ return DB.settings.nextInv; },
+  nextPONo(){ return DB.settings.nextPO; },
+
+  // Days between a yyyy-mm-dd date string and today (positive = in the past)
+  daysSince(dateStr){
+    if(!dateStr) return 0;
+    const d1 = new Date(dateStr+'T00:00:00');
+    const d2 = new Date(today()+'T00:00:00');
+    return Math.round((d2-d1)/86400000);
+  },
+  // Days remaining until a promise/due date (negative = overdue)
+  daysUntil(dateStr){
+    if(!dateStr) return null;
+    return -this.daysSince(dateStr);
+  },
+  agingBucket(days){
+    if(days<=30) return {key:'b1', label:'0-30', cls:'green'};
+    if(days<=60) return {key:'b2', label:'31-60', cls:'orange'};
+    if(days<=90) return {key:'b3', label:'61-90', cls:'orange'};
+    return {key:'b4', label:'90+', cls:'red'};
+  },
+  promiseStatus(promiseDate){
+    if(!promiseDate) return null;
+    const d = this.daysUntil(promiseDate);
+    if(d<0) return {label:`Overdue (${Math.abs(d)} din)`, cls:'red', days:d};
+    if(d===0) return {label:'Aaj Due Hai', cls:'orange', days:d};
+    if(d<=3) return {label:`${d} din baaqi`, cls:'orange', days:d};
+    return {label:`${d} din baaqi`, cls:'green', days:d};
+  },
+  // FIFO aging schedule: allocates total payments received against oldest
+  // invoices first, so what's left shows which invoices are actually still
+  // outstanding and how old they are. Opening balance (if positive) is
+  // treated as the oldest item.
+  customerAgingSchedule(custId){
+    const c = this.customerById(custId);
+    if(!c) return [];
+    const debits = [];
+    const opening = Number(c.openingBalance)||0;
+    if(opening>0) debits.push({kind:'Customer', refId:c.id, invNo:'Opening', date:'0000-00-01', promiseDate:null, amount:opening, name:c.name});
+    DB.sales.filter(s=>s.customerId===custId).forEach(s=>{
+      const remaining = (Number(s.grandTotal)||0) - (Number(s.paidAmount)||0);
+      if(remaining>0.004) debits.push({kind:'Customer', refId:s.id, invNo:s.invNo, date:s.date, promiseDate:s.promiseDate||null, amount:remaining, name:c.name});
+    });
+    let pool = DB.receipts.filter(r=>r.customerId===custId).reduce((sum,r)=>sum+(Number(r.amount)||0),0);
+    debits.sort((a,b)=> a.date<b.date? -1 : a.date>b.date? 1 : 0);
+    debits.forEach(d=>{
+      if(pool>=d.amount){ pool -= d.amount; d.remaining = 0; }
+      else { d.remaining = d.amount - pool; pool = 0; }
+    });
+    return debits.filter(d=> d.remaining>0.004);
+  },
+  supplierAgingSchedule(suppId){
+    const s = this.supplierById(suppId);
+    if(!s) return [];
+    const debits = [];
+    const opening = Number(s.openingBalance)||0;
+    if(opening>0) debits.push({kind:'Supplier', refId:s.id, invNo:'Opening', date:'0000-00-01', promiseDate:null, amount:opening, name:s.name});
+    DB.purchases.filter(p=>p.supplierId===suppId).forEach(p=>{
+      const remaining = (Number(p.grandTotal)||0) - (Number(p.paidAmount)||0);
+      if(remaining>0.004) debits.push({kind:'Supplier', refId:p.id, invNo:p.poNo, date:p.date, promiseDate:p.promiseDate||null, amount:remaining, name:s.name});
+    });
+    let pool = DB.paymentsOut.filter(r=>r.supplierId===suppId).reduce((sum,r)=>sum+(Number(r.amount)||0),0);
+    debits.sort((a,b)=> a.date<b.date? -1 : a.date>b.date? 1 : 0);
+    debits.forEach(d=>{
+      if(pool>=d.amount){ pool -= d.amount; d.remaining = 0; }
+      else { d.remaining = d.amount - pool; pool = 0; }
+    });
+    return debits.filter(d=> d.remaining>0.004);
+  },
+  // Combined schedule across all customers + suppliers
+  allAgingSchedule(){
+    let out = [];
+    DB.customers.forEach(c=> out = out.concat(this.customerAgingSchedule(c.id)));
+    DB.suppliers.forEach(s=> out = out.concat(this.supplierAgingSchedule(s.id)));
+    return out;
+  },
+  // Only entries that have a promise date set, sorted soonest-first
+  promiseAlerts(){
+    return this.allAgingSchedule().filter(d=> d.promiseDate).sort((a,b)=> a.promiseDate<b.promiseDate? -1 : a.promiseDate>b.promiseDate? 1 : 0);
+  }
+};
+
+/* =========================================================
+   UI CONTROLLER
+   ========================================================= */
+const UI = {
+
+  init(){
+    document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    document.getElementById('shopNameLabel').textContent = DB.settings.shopName || 'Motorcycle Parts';
+    this.bindNav();
+    this.bindForms();
+    this.renderDashboard();
+    this.renderStores();
+    this.renderItems();
+    this.renderCustomers();
+    this.renderSuppliers();
+    this.bindAgingTabs();
+    this.renderAging();
+    this.resetSaleForm();
+    this.resetPurchForm();
+    this.resetTransferForm();
+    this.renderReceipts();
+    this.renderPayouts();
+    this.renderExpenses();
+    this.renderVouchers();
+    this.renderInvestments();
+    this.renderSaleList();
+    this.renderPurchList();
+    this.loadSettingsForm();
+    Reports.bindTabs();
+    Reports.run();
+    document.getElementById('recDate').value = today();
+    document.getElementById('payDate').value = today();
+    document.getElementById('expDate').value = today();
+    document.getElementById('cvDate').value = today();
+    document.getElementById('investDate').value = today();
+    setTimeout(()=> this.checkMaturityNotifications(), 600);
+  },
+
+  bindNav(){
+    document.querySelectorAll('.nav-item').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+        el.classList.add('active');
+        const panel = el.dataset.panel;
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        document.getElementById('panel-'+panel).classList.add('active');
+        document.getElementById('panelTitle').textContent = el.querySelector('.txt').textContent;
+        if(panel==='dashboard') this.renderDashboard();
+        if(panel==='items') this.renderItems();
+        if(panel==='customers') this.renderCustomers();
+        if(panel==='suppliers') this.renderSuppliers();
+        if(panel==='aging') this.renderAging();
+        if(panel==='stores') this.renderStores();
+        if(panel==='transfer'){ this.refreshDropdowns(); this.renderTransfers(); }
+        if(panel==='salelist') this.renderSaleList();
+        if(panel==='purchaselist') this.renderPurchList();
+        if(panel==='reports') Reports.run();
+      });
+    });
+  },
+
+  toast(msg, type){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type? ' '+type : '');
+    setTimeout(()=> t.className='toast', 2200);
+  },
+
+  confirmAction(title, msg, onYes){
+    const modal = document.getElementById('confirmModal');
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMsg').textContent = msg;
+    modal.classList.add('active');
+    const btn = document.getElementById('confirmYesBtn');
+    btn.onclick = ()=>{ modal.classList.remove('active'); onYes(); };
+  },
+  closeConfirm(){ document.getElementById('confirmModal').classList.remove('active'); },
+
+  /* ---------- DASHBOARD ---------- */
+  renderDashboard(){
+    const cash = Calc.cashInHand();
+    const recv = Calc.totalReceivable();
+    const pay = Calc.totalPayable();
+    const stockVal = Calc.stockValue();
+    const todaySales = Calc.salesTotal(today(), today());
+    const todayExp = Calc.expensesTotal(today(), today());
+    const promiseAlerts = Calc.promiseAlerts();
+    const dueSoon = promiseAlerts.filter(d=> Calc.daysUntil(d.promiseDate) <= 3);
+    const overdueCount = promiseAlerts.filter(d=> Calc.daysUntil(d.promiseDate) < 0).length;
+
+    const cardsHtml = `
+      <div class="card blue"><div class="label">Cash In Hand</div><div class="value">Rs ${fmt(cash)}</div></div>
+      <div class="card green"><div class="label">Aaj Ki Sale</div><div class="value">Rs ${fmt(todaySales)}</div></div>
+      <div class="card red"><div class="label">Customers Se Wusool Karna (Receivable)</div><div class="value">Rs ${fmt(recv)}</div></div>
+      <div class="card orange"><div class="label">Suppliers Ko Dena (Payable)</div><div class="value">Rs ${fmt(pay)}</div></div>
+      <div class="card blue"><div class="label">Stock Value</div><div class="value">Rs ${fmt(stockVal)}</div></div>
+      <div class="card red"><div class="label">Aaj Ke Expenses</div><div class="value">Rs ${fmt(todayExp)}</div></div>
+      <div class="card green"><div class="label">Net Investment</div><div class="value">Rs ${fmt(Calc.totalInvestment())}</div></div>
+      <div class="card ${overdueCount>0?'red':'orange'}"><div class="label">Promise Date Overdue</div><div class="value">${overdueCount}</div></div>
+    `;
+    document.getElementById('dashCards').innerHTML = cardsHtml;
+
+    const dashList = dueSoon.slice(0,15);
+    document.querySelector('#dashPromiseTable tbody').innerHTML = dashList.map(d=>{
+      const st = Calc.promiseStatus(d.promiseDate);
+      return `<tr><td>${d.kind}</td><td>${d.name}</td><td>${d.invNo}</td><td>Rs ${fmt(d.remaining)}</td><td>${d.promiseDate}</td><td><span class="badge ${st.cls}">${st.label}</span></td></tr>`;
+    }).join('') || '<tr><td colspan="6" class="muted">Koi overdue ya maturing promise date nahi</td></tr>';
+    document.getElementById('dashPromiseBox').style.display = dashList.length ? 'block' : 'none';
+
+    // recent transactions (merge all types)
+    let tx = [];
+    DB.sales.forEach(s=> tx.push({date:s.date, type:'Sale', detail:'Inv#'+s.invNo+' - '+this.custName(s.customerId), amount:s.grandTotal, ts:s.id}));
+    DB.purchases.forEach(p=> tx.push({date:p.date, type:'Purchase', detail:'PO#'+p.poNo+' - '+this.suppName(p.supplierId), amount:p.grandTotal, ts:p.id}));
+    DB.receipts.forEach(r=> tx.push({date:r.date, type:'Wusooli', detail:this.custName(r.customerId), amount:r.amount, ts:r.id}));
+    DB.paymentsOut.forEach(p=> tx.push({date:p.date, type:'Adaigi', detail:this.suppName(p.supplierId), amount:p.amount, ts:p.id}));
+    DB.expenses.forEach(e=> tx.push({date:e.date, type:'Expense', detail:e.category, amount:e.amount, ts:e.id}));
+    DB.cashVouchers.forEach(v=> tx.push({date:v.date, type:'Voucher '+v.type.toUpperCase(), detail:v.note, amount:v.amount, ts:v.id}));
+    (DB.investments||[]).forEach(v=> tx.push({date:v.date, type:v.type==='investment'?'Investment':'Withdraw', detail:v.note, amount:v.amount, ts:v.id}));
+    tx.sort((a,b)=> (a.date < b.date ? 1 : a.date > b.date ? -1 : (a.ts < b.ts ? 1:-1)));
+    tx = tx.slice(0,10);
+    document.querySelector('#recentTxTable tbody').innerHTML = tx.map(t=>`
+      <tr><td>${t.date}</td><td>${t.type}</td><td>${t.detail||''}</td><td>Rs ${fmt(t.amount)}</td></tr>
+    `).join('') || '<tr><td colspan="4" class="muted">Koi transaction nahi</td></tr>';
+
+    const low = DB.items.filter(it=> Calc.stockQty(it.id) <= (Number(it.minStock)||0));
+    document.querySelector('#lowStockTable tbody').innerHTML = low.map(it=>`
+      <tr><td>${it.name}</td><td>${fmt(Calc.stockQty(it.id))}</td><td>${fmt(it.minStock)}</td></tr>
+    `).join('') || '<tr><td colspan="3" class="muted">Sab items ka stock theek hai</td></tr>';
+  },
+
+  custName(id){ const c = Calc.customerById(id); return c ? c.name : 'Cash Customer'; },
+  suppName(id){ const s = Calc.supplierById(id); return s ? s.name : '-'; },
+
+  /* ---------- AGING / PROMISE DATES ---------- */
+  bindAgingTabs(){
+    document.querySelectorAll('[data-aging]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('[data-aging]').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.agingtab').forEach(t=> t.style.display='none');
+        document.getElementById('agingtab-'+btn.dataset.aging).style.display='block';
+      });
+    });
+  },
+  renderAging(){
+    // Promise date tracker (full list, soonest first)
+    const alerts = Calc.promiseAlerts();
+    document.querySelector('#promiseTable tbody').innerHTML = alerts.map(d=>{
+      const st = Calc.promiseStatus(d.promiseDate);
+      return `<tr><td>${d.kind}</td><td>${d.name}</td><td>${d.invNo}</td><td>${d.date}</td><td>Rs ${fmt(d.remaining)}</td><td>${d.promiseDate}</td><td><span class="badge ${st.cls}">${st.label}</span></td></tr>`;
+    }).join('') || '<tr><td colspan="7" class="muted">Koi promise date set nahi hai</td></tr>';
+
+    const overdue = alerts.filter(d=> Calc.daysUntil(d.promiseDate) < 0);
+    const box = document.getElementById('agingAlertBox');
+    box.innerHTML = overdue.length
+      ? `<div class="alert-banner">⚠️ ${overdue.length} invoice(s) apni promise date se overdue hain — foran follow-up karein.</div>`
+      : '';
+
+    // Customer aging summary
+    const custRows = DB.customers.map(c=>{
+      const sched = Calc.customerAgingSchedule(c.id);
+      const buckets = {b1:0,b2:0,b3:0,b4:0};
+      let total = 0;
+      sched.forEach(d=>{
+        const days = d.invNo==='Opening' ? 999 : Calc.daysSince(d.date);
+        buckets[Calc.agingBucket(days).key] += d.remaining;
+        total += d.remaining;
+      });
+      return {name:c.name, buckets, total};
+    }).filter(r=> r.total>0.004);
+    document.querySelector('#custAgingTable tbody').innerHTML = custRows.map(r=>`
+      <tr><td>${r.name}</td><td>Rs ${fmt(r.buckets.b1)}</td><td>Rs ${fmt(r.buckets.b2)}</td><td>Rs ${fmt(r.buckets.b3)}</td><td>Rs ${fmt(r.buckets.b4)}</td><td style="font-weight:700">Rs ${fmt(r.total)}</td></tr>
+    `).join('') || '<tr><td colspan="6" class="muted">Koi baaqaya balance nahi</td></tr>';
+
+    // Supplier aging summary
+    const suppRows = DB.suppliers.map(s=>{
+      const sched = Calc.supplierAgingSchedule(s.id);
+      const buckets = {b1:0,b2:0,b3:0,b4:0};
+      let total = 0;
+      sched.forEach(d=>{
+        const days = d.invNo==='Opening' ? 999 : Calc.daysSince(d.date);
+        buckets[Calc.agingBucket(days).key] += d.remaining;
+        total += d.remaining;
+      });
+      return {name:s.name, buckets, total};
+    }).filter(r=> r.total>0.004);
+    document.querySelector('#suppAgingTable tbody').innerHTML = suppRows.map(r=>`
+      <tr><td>${r.name}</td><td>Rs ${fmt(r.buckets.b1)}</td><td>Rs ${fmt(r.buckets.b2)}</td><td>Rs ${fmt(r.buckets.b3)}</td><td>Rs ${fmt(r.buckets.b4)}</td><td style="font-weight:700">Rs ${fmt(r.total)}</td></tr>
+    `).join('') || '<tr><td colspan="6" class="muted">Koi baaqaya balance nahi</td></tr>';
+  },
+  // Shown once per page load if anything is overdue or due today, so the shopkeeper
+  // notices even without opening the Aging panel.
+  checkMaturityNotifications(){
+    const alerts = Calc.promiseAlerts();
+    const overdue = alerts.filter(d=> Calc.daysUntil(d.promiseDate) < 0).length;
+    const dueToday = alerts.filter(d=> Calc.daysUntil(d.promiseDate) === 0).length;
+    if(overdue>0){
+      this.toast(`⚠️ ${overdue} promise date overdue hain — Aging panel check karein`, 'error');
+    } else if(dueToday>0){
+      this.toast(`⏰ ${dueToday} promise date aaj mature ho rahi hain`, 'success');
+    }
+  },
+
+  /* ---------- ITEMS ---------- */
+  bindForms(){
+    document.getElementById('itemForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      const id = document.getElementById('itemId').value;
+      let openingStockByStore;
+      if(id){
+        openingStockByStore = DB.items.find(i=>i.id===id).openingStockByStore;
+      } else {
+        openingStockByStore = {};
+        DB.stores.forEach(st=>{
+          const el = document.getElementById('itemOpening_'+st.id);
+          openingStockByStore[st.id] = el ? (Number(el.value)||0) : 0;
+        });
+      }
+      const obj = {
+        id: id || uid(),
+        name: document.getElementById('itemName').value.trim(),
+        nameUrdu: document.getElementById('itemNameUrdu').value.trim(),
+        code: document.getElementById('itemCode').value.trim(),
+        unit: document.getElementById('itemUnit').value.trim() || 'Pcs',
+        purchasePrice: Number(document.getElementById('itemPurchasePrice').value)||0,
+        salePrice: Number(document.getElementById('itemSalePrice').value)||0,
+        openingStockByStore,
+        minStock: Number(document.getElementById('itemMinStock').value)||0
+      };
+      if(!obj.name){ this.toast('Item ka naam likhein','error'); return; }
+      if(id){
+        const idx = DB.items.findIndex(i=>i.id===id);
+        DB.items[idx] = obj;
+      } else {
+        DB.items.push(obj);
+      }
+      saveDB();
+      this.toast('Item save ho gaya','success');
+      this.resetItemForm();
+      this.renderItems();
+      this.refreshDropdowns();
+    });
+
+    document.getElementById('custForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      const id = document.getElementById('custId').value;
+      const obj = {
+        id: id || uid(),
+        name: document.getElementById('custName').value.trim(),
+        phone: document.getElementById('custPhone').value.trim(),
+        address: document.getElementById('custAddress').value.trim(),
+        openingBalance: Number(document.getElementById('custOpening').value)||0
+      };
+      if(!obj.name){ this.toast('Naam likhein','error'); return; }
+      if(id){ DB.customers[DB.customers.findIndex(c=>c.id===id)] = obj; }
+      else { DB.customers.push(obj); }
+      saveDB();
+      this.toast('Customer save ho gaya','success');
+      this.resetCustForm();
+      this.renderCustomers();
+      this.refreshDropdowns();
+    });
+
+    document.getElementById('suppForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      const id = document.getElementById('suppId').value;
+      const obj = {
+        id: id || uid(),
+        name: document.getElementById('suppName').value.trim(),
+        phone: document.getElementById('suppPhone').value.trim(),
+        address: document.getElementById('suppAddress').value.trim(),
+        openingBalance: Number(document.getElementById('suppOpening').value)||0
+      };
+      if(!obj.name){ this.toast('Naam likhein','error'); return; }
+      if(id){ DB.suppliers[DB.suppliers.findIndex(s=>s.id===id)] = obj; }
+      else { DB.suppliers.push(obj); }
+      saveDB();
+      this.toast('Supplier save ho gaya','success');
+      this.resetSuppForm();
+      this.renderSuppliers();
+      this.refreshDropdowns();
+    });
+
+    document.getElementById('storeForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      const id = document.getElementById('storeId').value;
+      const name = document.getElementById('storeName').value.trim();
+      if(!name){ this.toast('Store ka naam likhein','error'); return; }
+      if(id){
+        DB.stores[DB.stores.findIndex(s=>s.id===id)].name = name;
+        this.toast('Store update ho gaya','success');
+      } else {
+        const newId = uid();
+        DB.stores.push({id:newId, name});
+        DB.items.forEach(it=>{
+          if(!it.openingStockByStore) it.openingStockByStore = {};
+          it.openingStockByStore[newId] = 0;
+        });
+        this.toast('Store add ho gaya','success');
+      }
+      saveDB();
+      this.resetStoreForm();
+      this.renderStores();
+      this.renderItems();
+      this.refreshDropdowns();
+    });
+
+    document.getElementById('transferForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      const itemId = document.getElementById('trItem').value;
+      const fromStoreId = document.getElementById('trFromStore').value;
+      const toStoreId = document.getElementById('trToStore').value;
+      const qty = Number(document.getElementById('trQty').value)||0;
+      if(!itemId){ this.toast('Item chunein','error'); return; }
+      if(!fromStoreId || !toStoreId){ this.toast('From/To store chunein','error'); return; }
+      if(fromStoreId===toStoreId){ this.toast('From aur To store alag hone chahiye','error'); return; }
+      if(qty<=0){ this.toast('Qty sahi likhein','error'); return; }
+      const available = Calc.stockQty(itemId, fromStoreId);
+      if(qty > available){ this.toast(`Available stock kam hai (${fmt(available)})`,'error'); return; }
+      const trDate = document.getElementById('trDate').value||today();
+      if(this.isDateLocked(trDate)) return;
+      DB.transfers.push({
+        id: uid(), date: trDate,
+        itemId, fromStoreId, toStoreId, qty,
+        note: document.getElementById('trNote').value.trim()
+      });
+      saveDB();
+      this.toast('Transfer save ho gaya','success');
+      this.resetTransferForm();
+      this.renderTransfers();
+      this.renderItems();
+      this.renderDashboard();
+    });
+
+    document.getElementById('receiptForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      const custId = document.getElementById('recCustomer').value;
+      const amt = Number(document.getElementById('recAmount').value)||0;
+      if(!custId){ this.toast('Customer chunein','error'); return; }
+      if(amt<=0){ this.toast('Amount sahi likhein','error'); return; }
+      const recDate = document.getElementById('recDate').value||today();
+      if(this.isDateLocked(recDate)) return;
+      DB.receipts.push({ id:uid(), date:recDate, customerId:custId, amount:amt, method:document.getElementById('recMethod').value, note:document.getElementById('recNote').value.trim() });
+      saveDB();
+      this.toast('Wusooli save ho gayi','success');
+      document.getElementById('receiptForm').reset();
+      document.getElementById('recDate').value = today();
+      this.renderReceipts(); this.renderDashboard(); this.renderCustomers(); this.renderAging();
+    });
+
+    document.getElementById('payoutForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      const suppId = document.getElementById('paySupplier').value;
+      const amt = Number(document.getElementById('payAmount').value)||0;
+      if(!suppId){ this.toast('Supplier chunein','error'); return; }
+      if(amt<=0){ this.toast('Amount sahi likhein','error'); return; }
+      const payDate = document.getElementById('payDate').value||today();
+      if(this.isDateLocked(payDate)) return;
+      DB.paymentsOut.push({ id:uid(), date:payDate, supplierId:suppId, amount:amt, method:document.getElementById('payMethod').value, note:document.getElementById('payNote').value.trim() });
+      saveDB();
+      this.toast('Adaigi save ho gayi','success');
+      document.getElementById('payoutForm').reset();
+      document.getElementById('payDate').value = today();
+      this.renderPayouts(); this.renderDashboard(); this.renderSuppliers(); this.renderAging();
+    });
+
+    document.getElementById('expForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      const amt = Number(document.getElementById('expAmount').value)||0;
+      if(amt<=0){ this.toast('Amount sahi likhein','error'); return; }
+      const expDate = document.getElementById('expDate').value||today();
+      if(this.isDateLocked(expDate)) return;
+      DB.expenses.push({ id:uid(), date:expDate, category:document.getElementById('expCategory').value, amount:amt, note:document.getElementById('expNote').value.trim() });
+      saveDB();
+      this.toast('Expense save ho gaya','success');
+      document.getElementById('expForm').reset();
+      document.getElementById('expDate').value = today();
+      this.renderExpenses(); this.renderDashboard();
+    });
+
+    document.getElementById('cvForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      const amt = Number(document.getElementById('cvAmount').value)||0;
+      if(amt<=0){ this.toast('Amount sahi likhein','error'); return; }
+      const cvDate = document.getElementById('cvDate').value||today();
+      if(this.isDateLocked(cvDate)) return;
+      DB.cashVouchers.push({ id:uid(), date:cvDate, type:document.getElementById('cvType').value, amount:amt, note:document.getElementById('cvNote').value.trim() });
+      saveDB();
+      this.toast('Voucher save ho gaya','success');
+      document.getElementById('cvForm').reset();
+      document.getElementById('cvDate').value = today();
+      this.renderVouchers(); this.renderDashboard();
+    });
+
+    document.getElementById('investForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      const amt = Number(document.getElementById('investAmount').value)||0;
+      if(amt<=0){ this.toast('Amount sahi likhein','error'); return; }
+      const investDate = document.getElementById('investDate').value||today();
+      if(this.isDateLocked(investDate)) return;
+      DB.investments.push({ id:uid(), date:investDate, type:document.getElementById('investType').value, amount:amt, note:document.getElementById('investNote').value.trim() });
+      saveDB();
+      this.toast('Save ho gaya','success');
+      document.getElementById('investForm').reset();
+      document.getElementById('investDate').value = today();
+      this.renderInvestments(); this.renderDashboard();
+    });
+  },
+
+  buildOpeningStockInputs(values, disabled){
+    const box = document.getElementById('itemOpeningStockContainer');
+    box.innerHTML = DB.stores.map(st=>{
+      const v = values ? (Number(values[st.id])||0) : 0;
+      return `<div class="field"><label>Opening Stock - ${st.name}</label>
+        <input type="number" step="0.01" id="itemOpening_${st.id}" value="${v}" ${disabled?'disabled':''}></div>`;
+    }).join('') || '<p class="muted">Pehle koi store add karein.</p>';
+  },
+  resetItemForm(){
+    document.getElementById('itemForm').reset();
+    document.getElementById('itemId').value='';
+    document.getElementById('itemUnit').value='Pcs';
+    this.buildOpeningStockInputs(null, false);
+    document.getElementById('itemMinStock').value=2;
+    document.getElementById('itemFormTitle').textContent='Naya Item Add Karein';
+  },
+  editItem(id){
+    const it = DB.items.find(i=>i.id===id); if(!it) return;
+    document.getElementById('itemId').value=it.id;
+    document.getElementById('itemName').value=it.name;
+    document.getElementById('itemNameUrdu').value=it.nameUrdu||'';
+    document.getElementById('itemCode').value=it.code||'';
+    document.getElementById('itemUnit').value=it.unit;
+    document.getElementById('itemPurchasePrice').value=it.purchasePrice;
+    document.getElementById('itemSalePrice').value=it.salePrice;
+    this.buildOpeningStockInputs(it.openingStockByStore, true);
+    document.getElementById('itemMinStock').value=it.minStock;
+    document.getElementById('itemFormTitle').textContent='Item Edit Karein: '+it.name;
+    window.scrollTo(0,0);
+  },
+  deleteItem(id){
+    const used = DB.sales.some(s=>s.items.some(li=>li.itemId===id)) || DB.purchases.some(p=>p.items.some(li=>li.itemId===id));
+    if(used){ this.toast('Ye item transactions mein use hua hai, delete nahi ho sakta','error'); return; }
+    this.confirmAction('Item Delete Karein?','Ye action wapis nahi ho sakta.', ()=>{
+      DB.items = DB.items.filter(i=>i.id!==id);
+      saveDB(); this.renderItems(); this.refreshDropdowns();
+      this.toast('Item delete ho gaya','success');
+    });
+  },
+  renderItems(){
+    const q = (document.getElementById('itemSearch').value||'').toLowerCase();
+    const rows = DB.items.filter(it=>
+      it.name.toLowerCase().includes(q) ||
+      (it.nameUrdu||'').toLowerCase().includes(q) ||
+      (it.code||'').toLowerCase().includes(q)
+    );
+    document.getElementById('itemsTableHead').innerHTML = `<tr><th>Name</th><th>Urdu Name</th><th>Code</th><th>Unit</th><th>Purchase Price</th><th>Sale Price</th>
+      ${DB.stores.map(st=>`<th>${st.name} Stock</th>`).join('')}
+      <th>Total Stock</th><th>Stock Value</th><th>Action</th></tr>`;
+    document.querySelector('#itemsTable tbody').innerHTML = rows.map(it=>{
+      const total = Calc.stockQty(it.id);
+      const low = total <= (Number(it.minStock)||0);
+      const storeCells = DB.stores.map(st=>`<td>${fmt(Calc.stockQty(it.id, st.id))}</td>`).join('');
+      return `<tr>
+        <td style="text-align:right">${it.name}</td>
+        <td style="text-align:right" dir="rtl">${it.nameUrdu||''}</td>
+        <td>${it.code||''}</td>
+        <td>${it.unit}</td>
+        <td>Rs ${fmt(it.purchasePrice)}</td>
+        <td>Rs ${fmt(it.salePrice)}</td>
+        ${storeCells}
+        <td style="font-weight:700">${fmt(total)} ${low?'<span class="badge red">Low</span>':''}</td>
+        <td>Rs ${fmt(total*it.purchasePrice)}</td>
+        <td><button class="small secondary" onclick="UI.editItem('${it.id}')">Edit</button> <button class="small danger" onclick="UI.deleteItem('${it.id}')">Delete</button></td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="${9+DB.stores.length}" class="muted">Koi item nahi mila</td></tr>`;
+  },
+
+  /* ---------- CUSTOMERS ---------- */
+  resetCustForm(){
+    document.getElementById('custForm').reset();
+    document.getElementById('custId').value='';
+    document.getElementById('custOpening').disabled=false;
+    document.getElementById('custFormTitle').textContent='Naya Customer Add Karein';
+  },
+  editCustomer(id){
+    const c = DB.customers.find(x=>x.id===id); if(!c) return;
+    document.getElementById('custId').value=c.id;
+    document.getElementById('custName').value=c.name;
+    document.getElementById('custPhone').value=c.phone;
+    document.getElementById('custAddress').value=c.address;
+    document.getElementById('custOpening').value=c.openingBalance;
+    document.getElementById('custOpening').disabled=true;
+    document.getElementById('custFormTitle').textContent='Customer Edit Karein: '+c.name;
+    window.scrollTo(0,0);
+  },
+  deleteCustomer(id){
+    const used = DB.sales.some(s=>s.customerId===id) || DB.receipts.some(r=>r.customerId===id);
+    if(used){ this.toast('Ye customer transactions mein use hua hai, delete nahi ho sakta','error'); return; }
+    this.confirmAction('Customer Delete Karein?','Ye action wapis nahi ho sakta.', ()=>{
+      DB.customers = DB.customers.filter(c=>c.id!==id);
+      saveDB(); this.renderCustomers(); this.refreshDropdowns();
+      this.toast('Customer delete ho gaya','success');
+    });
+  },
+  renderCustomers(){
+    const q = (document.getElementById('custSearch').value||'').toLowerCase();
+    const rows = DB.customers.filter(c=> c.name.toLowerCase().includes(q));
+    document.querySelector('#custTable tbody').innerHTML = rows.map(c=>{
+      const bal = Calc.customerBalance(c.id);
+      return `<tr>
+        <td style="text-align:right">${c.name}</td><td>${c.phone||''}</td>
+        <td style="color:${bal>0?'var(--danger)':'var(--accent)'}">Rs ${fmt(bal)}</td>
+        <td><button class="small secondary" onclick="UI.editCustomer('${c.id}')">Edit</button> <button class="small danger" onclick="UI.deleteCustomer('${c.id}')">Delete</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="4" class="muted">Koi customer nahi</td></tr>';
+  },
+
+  /* ---------- SUPPLIERS ---------- */
+  resetSuppForm(){
+    document.getElementById('suppForm').reset();
+    document.getElementById('suppId').value='';
+    document.getElementById('suppOpening').disabled=false;
+    document.getElementById('suppFormTitle').textContent='Naya Supplier Add Karein';
+  },
+  editSupplier(id){
+    const s = DB.suppliers.find(x=>x.id===id); if(!s) return;
+    document.getElementById('suppId').value=s.id;
+    document.getElementById('suppName').value=s.name;
+    document.getElementById('suppPhone').value=s.phone;
+    document.getElementById('suppAddress').value=s.address;
+    document.getElementById('suppOpening').value=s.openingBalance;
+    document.getElementById('suppOpening').disabled=true;
+    document.getElementById('suppFormTitle').textContent='Supplier Edit Karein: '+s.name;
+    window.scrollTo(0,0);
+  },
+  deleteSupplier(id){
+    const used = DB.purchases.some(p=>p.supplierId===id) || DB.paymentsOut.some(r=>r.supplierId===id);
+    if(used){ this.toast('Ye supplier transactions mein use hua hai, delete nahi ho sakta','error'); return; }
+    this.confirmAction('Supplier Delete Karein?','Ye action wapis nahi ho sakta.', ()=>{
+      DB.suppliers = DB.suppliers.filter(s=>s.id!==id);
+      saveDB(); this.renderSuppliers(); this.refreshDropdowns();
+      this.toast('Supplier delete ho gaya','success');
+    });
+  },
+  renderSuppliers(){
+    const q = (document.getElementById('suppSearch').value||'').toLowerCase();
+    const rows = DB.suppliers.filter(s=> s.name.toLowerCase().includes(q));
+    document.querySelector('#suppTable tbody').innerHTML = rows.map(s=>{
+      const bal = Calc.supplierBalance(s.id);
+      return `<tr>
+        <td style="text-align:right">${s.name}</td><td>${s.phone||''}</td>
+        <td style="color:${bal>0?'var(--danger)':'var(--accent)'}">Rs ${fmt(bal)}</td>
+        <td><button class="small secondary" onclick="UI.editSupplier('${s.id}')">Edit</button> <button class="small danger" onclick="UI.deleteSupplier('${s.id}')">Delete</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="4" class="muted">Koi supplier nahi</td></tr>';
+  },
+
+  /* ---------- STORES ---------- */
+  resetStoreForm(){
+    document.getElementById('storeForm').reset();
+    document.getElementById('storeId').value='';
+    document.getElementById('storeFormTitle').textContent='Naya Store Add Karein';
+  },
+  editStore(id){
+    const s = Calc.storeById(id); if(!s) return;
+    document.getElementById('storeId').value=s.id;
+    document.getElementById('storeName').value=s.name;
+    document.getElementById('storeFormTitle').textContent='Store Edit Karein: '+s.name;
+    window.scrollTo(0,0);
+  },
+  deleteStore(id){
+    if(DB.stores.length<=1){ this.toast('Kam az kam ek store hona zaroori hai','error'); return; }
+    const used = DB.purchases.some(p=>Calc.effStoreId(p)===id) || DB.sales.some(s=>Calc.effStoreId(s)===id) ||
+                 DB.transfers.some(t=>t.fromStoreId===id || t.toStoreId===id) ||
+                 DB.items.some(it=> Number((it.openingStockByStore||{})[id])>0 );
+    if(used){ this.toast('Ye store transactions/stock mein use hua hai, delete nahi ho sakta','error'); return; }
+    this.confirmAction('Store Delete Karein?','Ye action wapis nahi ho sakta.', ()=>{
+      DB.stores = DB.stores.filter(s=>s.id!==id);
+      DB.items.forEach(it=>{ if(it.openingStockByStore) delete it.openingStockByStore[id]; });
+      saveDB(); this.renderStores(); this.renderItems(); this.refreshDropdowns();
+      this.toast('Store delete ho gaya','success');
+    });
+  },
+  renderStores(){
+    document.querySelector('#storesTable tbody').innerHTML = DB.stores.map(s=>{
+      const val = Calc.stockValue(s.id);
+      return `<tr>
+        <td style="text-align:right">${s.name}</td>
+        <td>Rs ${fmt(val)}</td>
+        <td><button class="small secondary" onclick="UI.editStore('${s.id}')">Edit</button> <button class="small danger" onclick="UI.deleteStore('${s.id}')">Delete</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="3" class="muted">Koi store nahi</td></tr>';
+  },
+
+  /* ---------- INVENTORY TRANSFER ---------- */
+  resetTransferForm(){
+    document.getElementById('transferForm').reset();
+    document.getElementById('trDate').value = today();
+    this.refreshDropdowns();
+    this.onTransferItemChange();
+  },
+  onTransferItemChange(){
+    const itemId = document.getElementById('trItem').value;
+    const fromStoreId = document.getElementById('trFromStore').value;
+    const hint = document.getElementById('trStockHint');
+    if(itemId && fromStoreId){
+      hint.textContent = 'Available stock at source store: ' + fmt(Calc.stockQty(itemId, fromStoreId));
+    } else {
+      hint.textContent = '';
+    }
+  },
+  deleteTransfer(id){
+    const rec = DB.transfers.find(t=>t.id===id);
+    if(rec && this.isDateLocked(rec.date)) return;
+    this.confirmAction('Transfer Delete Karein?','Stock automatically wapis theek ho jayega.', ()=>{
+      DB.transfers = DB.transfers.filter(t=>t.id!==id);
+      saveDB(); this.renderTransfers(); this.renderItems(); this.renderDashboard();
+      this.toast('Transfer delete ho gaya','success');
+    });
+  },
+  renderTransfers(){
+    const rows = [...DB.transfers].sort((a,b)=> b.date.localeCompare(a.date));
+    document.querySelector('#transferTable tbody').innerHTML = rows.map(t=>{
+      const it = Calc.itemById(t.itemId);
+      const from = Calc.storeById(t.fromStoreId);
+      const to = Calc.storeById(t.toStoreId);
+      return `<tr>
+        <td>${t.date}</td><td style="text-align:right">${it?it.name:'-'}</td>
+        <td>${from?from.name:'-'}</td><td>${to?to.name:'-'}</td><td>${fmt(t.qty)}</td>
+        <td style="text-align:right">${t.note||''}</td>
+        <td><button class="small danger" onclick="UI.deleteTransfer('${t.id}')">Delete</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" class="muted">Koi transfer nahi</td></tr>';
+
+    // store-wise current stock summary table
+    const stTable = document.getElementById('storeStockTable');
+    stTable.innerHTML = `<thead><tr><th>Item</th>${DB.stores.map(s=>`<th>${s.name}</th>`).join('')}<th>Total</th></tr></thead>
+      <tbody>${DB.items.map(it=>`<tr><td style="text-align:right">${it.name}</td>
+        ${DB.stores.map(s=>`<td>${fmt(Calc.stockQty(it.id, s.id))}</td>`).join('')}
+        <td style="font-weight:700">${fmt(Calc.stockQty(it.id))}</td></tr>`).join('') || `<tr><td colspan="${DB.stores.length+2}" class="muted">Koi item nahi</td></tr>`}</tbody>`;
+  },
+
+  refreshDropdowns(){
+    const custOpts = '<option value="">-- Cash Customer --</option>' + DB.customers.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+    document.getElementById('saleCustomer').innerHTML = custOpts;
+    document.getElementById('recCustomer').innerHTML = '<option value="">-- Chunein --</option>' + DB.customers.map(c=>`<option value="${c.id}">${c.name} (Rs ${fmt(Calc.customerBalance(c.id))})</option>`).join('');
+    const suppOpts = '<option value="">-- Chunein --</option>' + DB.suppliers.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    document.getElementById('purchSupplier').innerHTML = suppOpts;
+    document.getElementById('paySupplier').innerHTML = '<option value="">-- Chunein --</option>' + DB.suppliers.map(s=>`<option value="${s.id}">${s.name} (Rs ${fmt(Calc.supplierBalance(s.id))})</option>`).join('');
+    // refresh item selects inside invoice rows
+    document.querySelectorAll('.item-select').forEach(sel=>{
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">-- Item --</option>' + DB.items.map(it=>`<option value="${it.id}">${it.code?it.code+' - ':''}${it.name}${it.nameUrdu?' / '+it.nameUrdu:''}</option>`).join('');
+      sel.value = cur;
+    });
+    // store selects
+    const storeOpts = DB.stores.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    ['saleStore','purchStore','trFromStore','trToStore'].forEach(id=>{
+      const sel = document.getElementById(id);
+      if(!sel) return;
+      const cur = sel.value;
+      sel.innerHTML = storeOpts;
+      if(cur && DB.stores.some(s=>s.id===cur)) sel.value = cur;
+    });
+    const trItemSel = document.getElementById('trItem');
+    if(trItemSel){
+      const cur = trItemSel.value;
+      trItemSel.innerHTML = '<option value="">-- Item --</option>' + DB.items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
+      if(cur) trItemSel.value = cur;
+    }
+  },
+
+  /* ---------- SALE INVOICE ---------- */
+  resetSaleForm(){
+    document.getElementById('saleEditId').value='';
+    document.getElementById('saleDate').value = today();
+    document.getElementById('saleInvNoDisplay').textContent = Calc.nextInvoiceNo();
+    document.getElementById('saleCustomer').value='';
+    document.getElementById('saleType').value='cash';
+    document.getElementById('salePaid').disabled=false;
+    document.getElementById('saleDiscount').value=0;
+    document.getElementById('salePaid').value=0;
+    document.getElementById('saleNote').value='';
+    document.querySelector('#saleItemsTable tbody').innerHTML='';
+    this.refreshDropdowns();
+    document.getElementById('saleStore').value = Calc.defaultStoreId();
+    this.addSaleRow();
+    this.onSaleTypeChange();
+    this.renderSaleQuickList();
+  },
+  onSaleStoreChange(){
+    document.querySelectorAll('#saleItemsTable tbody tr').forEach(tr=> this.onSaleItemChange(tr.dataset.rowid));
+  },
+  addSaleRow(itemId, qty, rate){
+    const tbody = document.querySelector('#saleItemsTable tbody');
+    const rowId = uid();
+    const tr = document.createElement('tr');
+    tr.dataset.rowid = rowId;
+    tr.innerHTML = `
+      <td><select class="item-select" onchange="UI.onSaleItemChange('${rowId}')">
+        <option value="">-- Item --</option>
+        ${DB.items.map(it=>`<option value="${it.id}">${it.code?it.code+' - ':''}${it.name}${it.nameUrdu?' / '+it.nameUrdu:''}</option>`).join('')}
+      </select></td>
+      <td class="stock-avail">-</td>
+      <td><input type="number" step="0.01" class="qty-input" value="${qty||1}" oninput="UI.calcSaleTotals()"></td>
+      <td><input type="number" step="0.01" class="rate-input" value="${rate||0}" oninput="UI.calcSaleTotals()"></td>
+      <td class="amt-cell">0</td>
+      <td><button type="button" class="small danger" onclick="UI.removeRow(this,'sale')">X</button></td>
+    `;
+    tbody.appendChild(tr);
+    if(itemId){ tr.querySelector('.item-select').value = itemId; this.onSaleItemChange(rowId); }
+  },
+  onSaleItemChange(rowId){
+    const tr = document.querySelector(`#saleItemsTable tr[data-rowid="${rowId}"]`);
+    const itemId = tr.querySelector('.item-select').value;
+    const item = Calc.itemById(itemId);
+    const storeId = document.getElementById('saleStore').value;
+    if(item){
+      tr.querySelector('.stock-avail').textContent = fmt(Calc.stockQty(itemId, storeId));
+      if(!tr.querySelector('.rate-input').dataset.userSet){
+        tr.querySelector('.rate-input').value = item.salePrice;
+      }
+    } else {
+      tr.querySelector('.stock-avail').textContent='-';
+    }
+    this.calcSaleTotals();
+  },
+  removeRow(btn, kind){
+    btn.closest('tr').remove();
+    if(kind==='sale') this.calcSaleTotals(); else this.calcPurchTotals();
+  },
+  onSaleTypeChange(){
+    const isCash = document.getElementById('saleType').value==='cash';
+    document.getElementById('salePaid').disabled = isCash;
+    document.getElementById('salePromiseDateField').style.display = isCash ? 'none' : 'flex';
+    if(isCash) document.getElementById('salePromiseDate').value='';
+    this.calcSaleTotals();
+  },
+  onPurchTypeChange(){
+    const isCash = document.getElementById('purchType').value==='cash';
+    document.getElementById('purchPaid').disabled = isCash;
+    document.getElementById('purchPromiseDateField').style.display = isCash ? 'none' : 'flex';
+    if(isCash) document.getElementById('purchPromiseDate').value='';
+    this.calcPurchTotals();
+  },
+  calcSaleTotals(){
+    let subtotal = 0;
+    document.querySelectorAll('#saleItemsTable tbody tr').forEach(tr=>{
+      const qty = Number(tr.querySelector('.qty-input').value)||0;
+      const rate = Number(tr.querySelector('.rate-input').value)||0;
+      const amt = qty*rate;
+      tr.querySelector('.amt-cell').textContent = fmt(amt);
+      subtotal += amt;
+    });
+    const discount = Number(document.getElementById('saleDiscount').value)||0;
+    const grand = Math.max(subtotal - discount, 0);
+    if(document.getElementById('saleType').value==='cash'){
+      document.getElementById('salePaid').value = grand;
+    }
+    const paid = Number(document.getElementById('salePaid').value)||0;
+    const balance = grand - paid;
+    document.getElementById('saleSubtotal').textContent = fmt(subtotal);
+    document.getElementById('saleGrandTotal').textContent = fmt(grand);
+    document.getElementById('saleBalance').textContent = fmt(balance);
+    return {subtotal, discount, grand, paid, balance};
+  },
+  saveSale(printMode){
+    const editId = document.getElementById('saleEditId').value;
+    const date = document.getElementById('saleDate').value || today();
+    const customerId = document.getElementById('saleCustomer').value || null;
+    const storeId = document.getElementById('saleStore').value || Calc.defaultStoreId();
+    const items = [];
+    let stockError = '';
+    document.querySelectorAll('#saleItemsTable tbody tr').forEach(tr=>{
+      const itemId = tr.querySelector('.item-select').value;
+      const qty = Number(tr.querySelector('.qty-input').value)||0;
+      const rate = Number(tr.querySelector('.rate-input').value)||0;
+      if(itemId && qty>0){
+        items.push({itemId, qty, rate, amount: qty*rate});
+      }
+    });
+    if(items.length===0){ this.toast('Kam az kam ek item add karein','error'); return; }
+
+    // stock validation (accounting for the fact we're editing - add back old qty first,
+    // but only if the old invoice was at the same store)
+    const oldItemsQty = {};
+    if(editId){
+      const old = DB.sales.find(s=>s.id===editId);
+      if(old && this.isDateLocked(old.date)) return;
+      if(old && Calc.effStoreId(old)===storeId) old.items.forEach(li=> oldItemsQty[li.itemId] = (oldItemsQty[li.itemId]||0) + Number(li.qty));
+    }
+    for(const li of items){
+      const available = Calc.stockQty(li.itemId, storeId) + (oldItemsQty[li.itemId]||0);
+      if(li.qty > available && !DB.settings.allowNegativeStock){
+        const it = Calc.itemById(li.itemId);
+        stockError = `${it?it.name:'Item'} ka stock is store mein kam hai (Available: ${fmt(available)}, Chahiye: ${fmt(li.qty)}). Negative stock allow karne ke liye Settings mein option on karein.`;
+      }
+    }
+    if(stockError){ this.toast(stockError,'error'); return; }
+    if(this.isDateLocked(date)) return;
+
+    const totals = this.calcSaleTotals();
+    const saleObj = {
+      id: editId || uid(),
+      invNo: editId ? DB.sales.find(s=>s.id===editId).invNo : Calc.nextInvoiceNo(),
+      date, customerId, storeId, items,
+      type: document.getElementById('saleType').value,
+      subtotal: totals.subtotal, discount: totals.discount, grandTotal: totals.grand,
+      paidAmount: totals.paid, note: document.getElementById('saleNote').value.trim(),
+      promiseDate: document.getElementById('saleType').value==='credit' ? (document.getElementById('salePromiseDate').value||'') : ''
+    };
+    if(editId){
+      DB.sales[DB.sales.findIndex(s=>s.id===editId)] = saleObj;
+      this.toast('Invoice update ho gaya','success');
+    } else {
+      DB.sales.push(saleObj);
+      DB.settings.nextInv = (Number(DB.settings.nextInv)||1) + 1;
+      this.toast('Invoice save ho gaya','success');
+    }
+    saveDB();
+    const savedId = saleObj.id;
+    const printLang = document.getElementById('salePrintLang').value;
+    this.resetSaleForm();
+    this.renderDashboard(); this.renderItems(); this.renderCustomers(); this.renderSaleList(); this.renderAging();
+    if(printMode) Print.doc('sale', savedId, printMode, printLang);
+  },
+  editSale(id){
+    const s = DB.sales.find(x=>x.id===id); if(!s) return;
+    if(this.isDateLocked(s.date)) return;
+    document.getElementById('saleEditId').value = s.id;
+    document.getElementById('saleDate').value = s.date;
+    document.getElementById('saleInvNoDisplay').textContent = s.invNo;
+    this.refreshDropdowns();
+    document.getElementById('saleCustomer').value = s.customerId || '';
+    document.getElementById('saleStore').value = Calc.effStoreId(s);
+    document.querySelector('#saleItemsTable tbody').innerHTML='';
+    s.items.forEach(li=> this.addSaleRow(li.itemId, li.qty, li.rate));
+    document.getElementById('saleDiscount').value = s.discount;
+    document.getElementById('saleType').value = s.type || (s.paidAmount>=s.grandTotal ? 'cash' : 'credit');
+    document.getElementById('salePaid').disabled = document.getElementById('saleType').value==='cash';
+    document.getElementById('salePaid').value = s.paidAmount;
+    document.getElementById('saleNote').value = s.note||'';
+    this.onSaleTypeChange();
+    document.getElementById('salePromiseDate').value = s.promiseDate||'';
+    this.calcSaleTotals();
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.querySelector('[data-panel="sale"]').classList.add('active');
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('panel-sale').classList.add('active');
+    document.getElementById('panelTitle').textContent='Sale Invoice';
+    window.scrollTo(0,0);
+  },
+  deleteSale(id){
+    const rec = DB.sales.find(s=>s.id===id);
+    if(rec && this.isDateLocked(rec.date)) return;
+    this.confirmAction('Invoice Delete Karein?','Stock aur customer balance automatically theek ho jayega.', ()=>{
+      DB.sales = DB.sales.filter(s=>s.id!==id);
+      saveDB();
+      this.toast('Invoice delete ho gaya','success');
+      this.renderDashboard(); this.renderItems(); this.renderCustomers(); this.renderSaleList(); this.renderSaleQuickList(); this.renderAging();
+    });
+  },
+  renderSaleList(){
+    const q = (document.getElementById('saleListSearch').value||'').toLowerCase();
+    let rows = [...DB.sales].sort((a,b)=> b.invNo - a.invNo);
+    rows = rows.filter(s=> String(s.invNo).includes(q) || this.custName(s.customerId).toLowerCase().includes(q));
+    document.querySelector('#saleListTable tbody').innerHTML = rows.map(s=>{
+      const bal = s.grandTotal - s.paidAmount;
+      return `<tr>
+        <td>${s.invNo}</td><td>${s.date}</td><td style="text-align:right">${this.custName(s.customerId)}</td>
+        <td>Rs ${fmt(s.grandTotal)}</td><td>Rs ${fmt(s.paidAmount)}</td>
+        <td style="color:${bal>0?'var(--danger)':'var(--accent)'}">Rs ${fmt(bal)}</td>
+        <td>
+          <button class="small secondary" onclick="UI.editSale('${s.id}')">Edit</button>
+          <button class="small danger" onclick="UI.deleteSale('${s.id}')">Delete</button><br><br>
+          <button class="small success" onclick="Print.doc('sale','${s.id}','thermal')">🖨️ Chota Bill</button>
+          <button class="small success" onclick="Print.doc('sale','${s.id}','a4')">🖨️ A4 Bill</button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" class="muted">Koi invoice nahi</td></tr>';
+  },
+
+  renderSaleQuickList(){
+    const el = document.getElementById('saleQuickSearch');
+    const q = (el ? el.value : '').toLowerCase();
+    let rows = [...DB.sales].sort((a,b)=> b.invNo - a.invNo);
+    rows = rows.filter(s=> String(s.invNo).includes(q) || this.custName(s.customerId).toLowerCase().includes(q));
+    const tbody = document.querySelector('#saleQuickTable tbody');
+    if(!tbody) return;
+    tbody.innerHTML = rows.map(s=>{
+      const bal = s.grandTotal - s.paidAmount;
+      return `<tr>
+        <td>${s.invNo}</td><td>${s.date}</td><td style="text-align:right">${this.custName(s.customerId)}</td>
+        <td>Rs ${fmt(s.grandTotal)}</td><td>Rs ${fmt(s.paidAmount)}</td>
+        <td style="color:${bal>0?'var(--danger)':'var(--accent)'}">Rs ${fmt(bal)}</td>
+        <td>
+          <button class="small secondary" onclick="UI.editSale('${s.id}')">Edit</button>
+          <button class="small danger" onclick="UI.deleteSale('${s.id}')">Delete</button>
+          <button class="small success" onclick="Print.doc('sale','${s.id}','thermal')">🖨️ Chota</button>
+          <button class="small success" onclick="Print.doc('sale','${s.id}','a4')">🖨️ A4</button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" class="muted">Koi invoice nahi</td></tr>';
+  },
+
+  /* ---------- PURCHASE INVOICE ---------- */
+  resetPurchForm(){
+    document.getElementById('purchEditId').value='';
+    document.getElementById('purchDate').value = today();
+    document.getElementById('poNoDisplay').textContent = Calc.nextPONo();
+    document.getElementById('purchSupplier').value='';
+    document.getElementById('purchType').value='cash';
+    document.getElementById('purchPaid').disabled=false;
+    document.getElementById('purchDiscount').value=0;
+    document.getElementById('purchPaid').value=0;
+    document.getElementById('purchNote').value='';
+    document.querySelector('#purchItemsTable tbody').innerHTML='';
+    this.refreshDropdowns();
+    document.getElementById('purchStore').value = Calc.defaultStoreId();
+    this.addPurchRow();
+    this.onPurchTypeChange();
+    this.renderPurchQuickList();
+  },
+  onPurchStoreChange(){
+    document.querySelectorAll('#purchItemsTable tbody tr').forEach(tr=> this.onPurchItemChange(tr.dataset.rowid));
+  },
+  addPurchRow(itemId, qty, rate){
+    const tbody = document.querySelector('#purchItemsTable tbody');
+    const rowId = uid();
+    const tr = document.createElement('tr');
+    tr.dataset.rowid = rowId;
+    tr.innerHTML = `
+      <td><select class="item-select" onchange="UI.onPurchItemChange('${rowId}')">
+        <option value="">-- Item --</option>
+        ${DB.items.map(it=>`<option value="${it.id}">${it.code?it.code+' - ':''}${it.name}${it.nameUrdu?' / '+it.nameUrdu:''}</option>`).join('')}
+      </select></td>
+      <td class="stock-avail">-</td>
+      <td><input type="number" step="0.01" class="qty-input" value="${qty||1}" oninput="UI.calcPurchTotals()"></td>
+      <td><input type="number" step="0.01" class="rate-input" value="${rate||0}" oninput="UI.calcPurchTotals()"></td>
+      <td class="amt-cell">0</td>
+      <td><button type="button" class="small danger" onclick="UI.removeRow(this,'purch')">X</button></td>
+    `;
+    tbody.appendChild(tr);
+    if(itemId){ tr.querySelector('.item-select').value = itemId; this.onPurchItemChange(rowId); }
+  },
+  onPurchItemChange(rowId){
+    const tr = document.querySelector(`#purchItemsTable tr[data-rowid="${rowId}"]`);
+    const itemId = tr.querySelector('.item-select').value;
+    const item = Calc.itemById(itemId);
+    const storeId = document.getElementById('purchStore').value;
+    if(item){
+      tr.querySelector('.stock-avail').textContent = fmt(Calc.stockQty(itemId, storeId));
+      if(!tr.querySelector('.rate-input').dataset.userSet){
+        tr.querySelector('.rate-input').value = item.purchasePrice;
+      }
+    } else {
+      tr.querySelector('.stock-avail').textContent='-';
+    }
+    this.calcPurchTotals();
+  },
+  calcPurchTotals(){
+    let subtotal = 0;
+    document.querySelectorAll('#purchItemsTable tbody tr').forEach(tr=>{
+      const qty = Number(tr.querySelector('.qty-input').value)||0;
+      const rate = Number(tr.querySelector('.rate-input').value)||0;
+      const amt = qty*rate;
+      tr.querySelector('.amt-cell').textContent = fmt(amt);
+      subtotal += amt;
+    });
+    const discount = Number(document.getElementById('purchDiscount').value)||0;
+    const grand = Math.max(subtotal - discount, 0);
+    if(document.getElementById('purchType').value==='cash'){
+      document.getElementById('purchPaid').value = grand;
+    }
+    const paid = Number(document.getElementById('purchPaid').value)||0;
+    const balance = grand - paid;
+    document.getElementById('purchSubtotal').textContent = fmt(subtotal);
+    document.getElementById('purchGrandTotal').textContent = fmt(grand);
+    document.getElementById('purchBalance').textContent = fmt(balance);
+    return {subtotal, discount, grand, paid, balance};
+  },
+  savePurchase(printMode){
+    const editId = document.getElementById('purchEditId').value;
+    const date = document.getElementById('purchDate').value || today();
+    const supplierId = document.getElementById('purchSupplier').value || null;
+    const storeId = document.getElementById('purchStore').value || Calc.defaultStoreId();
+    if(!supplierId){ this.toast('Supplier chunein','error'); return; }
+    const items = [];
+    document.querySelectorAll('#purchItemsTable tbody tr').forEach(tr=>{
+      const itemId = tr.querySelector('.item-select').value;
+      const qty = Number(tr.querySelector('.qty-input').value)||0;
+      const rate = Number(tr.querySelector('.rate-input').value)||0;
+      if(itemId && qty>0){
+        items.push({itemId, qty, rate, amount: qty*rate});
+      }
+    });
+    if(items.length===0){ this.toast('Kam az kam ek item add karein','error'); return; }
+    if(editId){
+      const oldP = DB.purchases.find(p=>p.id===editId);
+      if(oldP && this.isDateLocked(oldP.date)) return;
+    }
+    if(this.isDateLocked(date)) return;
+    const totals = this.calcPurchTotals();
+    const purchObj = {
+      id: editId || uid(),
+      poNo: editId ? DB.purchases.find(p=>p.id===editId).poNo : Calc.nextPONo(),
+      date, supplierId, storeId, items,
+      type: document.getElementById('purchType').value,
+      subtotal: totals.subtotal, discount: totals.discount, grandTotal: totals.grand,
+      paidAmount: totals.paid, note: document.getElementById('purchNote').value.trim(),
+      promiseDate: document.getElementById('purchType').value==='credit' ? (document.getElementById('purchPromiseDate').value||'') : ''
+    };
+    if(editId){
+      DB.purchases[DB.purchases.findIndex(p=>p.id===editId)] = purchObj;
+      this.toast('Purchase update ho gaya','success');
+    } else {
+      DB.purchases.push(purchObj);
+      DB.settings.nextPO = (Number(DB.settings.nextPO)||1) + 1;
+      this.toast('Purchase save ho gaya','success');
+    }
+    saveDB();
+    const savedId = purchObj.id;
+    const printLang = document.getElementById('purchPrintLang').value;
+    this.resetPurchForm();
+    this.renderDashboard(); this.renderItems(); this.renderSuppliers(); this.renderPurchList(); this.renderAging();
+    if(printMode) Print.doc('purchase', savedId, printMode, printLang);
+  },
+  editPurchase(id){
+    const p = DB.purchases.find(x=>x.id===id); if(!p) return;
+    if(this.isDateLocked(p.date)) return;
+    document.getElementById('purchEditId').value = p.id;
+    document.getElementById('purchDate').value = p.date;
+    document.getElementById('poNoDisplay').textContent = p.poNo;
+    this.refreshDropdowns();
+    document.getElementById('purchSupplier').value = p.supplierId || '';
+    document.getElementById('purchStore').value = Calc.effStoreId(p);
+    document.querySelector('#purchItemsTable tbody').innerHTML='';
+    p.items.forEach(li=> this.addPurchRow(li.itemId, li.qty, li.rate));
+    document.getElementById('purchDiscount').value = p.discount;
+    document.getElementById('purchType').value = p.type || (p.paidAmount>=p.grandTotal ? 'cash' : 'credit');
+    document.getElementById('purchPaid').disabled = document.getElementById('purchType').value==='cash';
+    document.getElementById('purchPaid').value = p.paidAmount;
+    document.getElementById('purchNote').value = p.note||'';
+    this.onPurchTypeChange();
+    document.getElementById('purchPromiseDate').value = p.promiseDate||'';
+    this.calcPurchTotals();
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.querySelector('[data-panel="purchase"]').classList.add('active');
+    document.querySelectorAll('.panel').forEach(pn=>pn.classList.remove('active'));
+    document.getElementById('panel-purchase').classList.add('active');
+    document.getElementById('panelTitle').textContent='Purchase Invoice';
+    window.scrollTo(0,0);
+  },
+  deletePurchase(id){
+    const rec = DB.purchases.find(p=>p.id===id);
+    if(rec && this.isDateLocked(rec.date)) return;
+    this.confirmAction('Purchase Delete Karein?','Stock aur supplier balance automatically theek ho jayega.', ()=>{
+      DB.purchases = DB.purchases.filter(p=>p.id!==id);
+      saveDB();
+      this.toast('Purchase delete ho gaya','success');
+      this.renderDashboard(); this.renderItems(); this.renderSuppliers(); this.renderPurchList(); this.renderPurchQuickList(); this.renderAging();
+    });
+  },
+  renderPurchList(){
+    const q = (document.getElementById('purchListSearch').value||'').toLowerCase();
+    let rows = [...DB.purchases].sort((a,b)=> b.poNo - a.poNo);
+    rows = rows.filter(p=> String(p.poNo).includes(q) || this.suppName(p.supplierId).toLowerCase().includes(q));
+    document.querySelector('#purchListTable tbody').innerHTML = rows.map(p=>{
+      const bal = p.grandTotal - p.paidAmount;
+      return `<tr>
+        <td>${p.poNo}</td><td>${p.date}</td><td style="text-align:right">${this.suppName(p.supplierId)}</td>
+        <td>Rs ${fmt(p.grandTotal)}</td><td>Rs ${fmt(p.paidAmount)}</td>
+        <td style="color:${bal>0?'var(--danger)':'var(--accent)'}">Rs ${fmt(bal)}</td>
+        <td>
+          <button class="small secondary" onclick="UI.editPurchase('${p.id}')">Edit</button>
+          <button class="small danger" onclick="UI.deletePurchase('${p.id}')">Delete</button><br><br>
+          <button class="small success" onclick="Print.doc('purchase','${p.id}','thermal')">🖨️ Chota Bill</button>
+          <button class="small success" onclick="Print.doc('purchase','${p.id}','a4')">🖨️ A4 Bill</button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" class="muted">Koi purchase nahi</td></tr>';
+  },
+
+  renderPurchQuickList(){
+    const el = document.getElementById('purchQuickSearch');
+    const q = (el ? el.value : '').toLowerCase();
+    let rows = [...DB.purchases].sort((a,b)=> b.poNo - a.poNo);
+    rows = rows.filter(p=> String(p.poNo).includes(q) || this.suppName(p.supplierId).toLowerCase().includes(q));
+    const tbody = document.querySelector('#purchQuickTable tbody');
+    if(!tbody) return;
+    tbody.innerHTML = rows.map(p=>{
+      const bal = p.grandTotal - p.paidAmount;
+      return `<tr>
+        <td>${p.poNo}</td><td>${p.date}</td><td style="text-align:right">${this.suppName(p.supplierId)}</td>
+        <td>Rs ${fmt(p.grandTotal)}</td><td>Rs ${fmt(p.paidAmount)}</td>
+        <td style="color:${bal>0?'var(--danger)':'var(--accent)'}">Rs ${fmt(bal)}</td>
+        <td>
+          <button class="small secondary" onclick="UI.editPurchase('${p.id}')">Edit</button>
+          <button class="small danger" onclick="UI.deletePurchase('${p.id}')">Delete</button>
+          <button class="small success" onclick="Print.doc('purchase','${p.id}','thermal')">🖨️ Chota</button>
+          <button class="small success" onclick="Print.doc('purchase','${p.id}','a4')">🖨️ A4</button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" class="muted">Koi purchase nahi</td></tr>';
+  },
+
+  /* ---------- RECEIPTS / PAYMENTS / EXPENSES / VOUCHERS lists ---------- */
+  renderReceipts(){
+    document.querySelector('#recTable tbody').innerHTML = [...DB.receipts].sort((a,b)=> b.date.localeCompare(a.date)).map(r=>`
+      <tr><td>${r.date}</td><td style="text-align:right">${this.custName(r.customerId)}</td><td>Rs ${fmt(r.amount)}</td><td>${r.method}</td><td style="text-align:right">${r.note||''}</td>
+      <td><button class="small danger" onclick="UI.deleteReceipt('${r.id}')">Delete</button></td></tr>
+    `).join('') || '<tr><td colspan="6" class="muted">Koi record nahi</td></tr>';
+  },
+  deleteReceipt(id){
+    const rec = DB.receipts.find(r=>r.id===id);
+    if(rec && this.isDateLocked(rec.date)) return;
+    this.confirmAction('Delete Karein?','Ye wusooli record delete ho jayegi.', ()=>{
+      DB.receipts = DB.receipts.filter(r=>r.id!==id); saveDB();
+      this.renderReceipts(); this.renderDashboard(); this.renderCustomers(); this.renderAging();
+      this.toast('Delete ho gaya','success');
+    });
+  },
+  renderPayouts(){
+    document.querySelector('#payTable tbody').innerHTML = [...DB.paymentsOut].sort((a,b)=> b.date.localeCompare(a.date)).map(p=>`
+      <tr><td>${p.date}</td><td style="text-align:right">${this.suppName(p.supplierId)}</td><td>Rs ${fmt(p.amount)}</td><td>${p.method}</td><td style="text-align:right">${p.note||''}</td>
+      <td><button class="small danger" onclick="UI.deletePayout('${p.id}')">Delete</button></td></tr>
+    `).join('') || '<tr><td colspan="6" class="muted">Koi record nahi</td></tr>';
+  },
+  deletePayout(id){
+    const rec = DB.paymentsOut.find(p=>p.id===id);
+    if(rec && this.isDateLocked(rec.date)) return;
+    this.confirmAction('Delete Karein?','Ye adaigi record delete ho jayegi.', ()=>{
+      DB.paymentsOut = DB.paymentsOut.filter(p=>p.id!==id); saveDB();
+      this.renderPayouts(); this.renderDashboard(); this.renderSuppliers(); this.renderAging();
+      this.toast('Delete ho gaya','success');
+    });
+  },
+  renderExpenses(){
+    document.querySelector('#expTable tbody').innerHTML = [...DB.expenses].sort((a,b)=> b.date.localeCompare(a.date)).map(e=>`
+      <tr><td>${e.date}</td><td style="text-align:right">${e.category}</td><td>Rs ${fmt(e.amount)}</td><td style="text-align:right">${e.note||''}</td>
+      <td><button class="small danger" onclick="UI.deleteExpense('${e.id}')">Delete</button></td></tr>
+    `).join('') || '<tr><td colspan="5" class="muted">Koi record nahi</td></tr>';
+  },
+  deleteExpense(id){
+    const rec = DB.expenses.find(e=>e.id===id);
+    if(rec && this.isDateLocked(rec.date)) return;
+    this.confirmAction('Delete Karein?','Ye expense record delete ho jayega.', ()=>{
+      DB.expenses = DB.expenses.filter(e=>e.id!==id); saveDB();
+      this.renderExpenses(); this.renderDashboard();
+      this.toast('Delete ho gaya','success');
+    });
+  },
+  renderVouchers(){
+    document.querySelector('#cvTable tbody').innerHTML = [...DB.cashVouchers].sort((a,b)=> b.date.localeCompare(a.date)).map(v=>`
+      <tr><td>${v.date}</td><td><span class="badge ${v.type==='in'?'green':'red'}">${v.type.toUpperCase()}</span></td><td>Rs ${fmt(v.amount)}</td><td style="text-align:right">${v.note||''}</td>
+      <td><button class="small danger" onclick="UI.deleteVoucher('${v.id}')">Delete</button></td></tr>
+    `).join('') || '<tr><td colspan="5" class="muted">Koi record nahi</td></tr>';
+  },
+  deleteVoucher(id){
+    const rec = DB.cashVouchers.find(v=>v.id===id);
+    if(rec && this.isDateLocked(rec.date)) return;
+    this.confirmAction('Delete Karein?','Ye voucher delete ho jayega.', ()=>{
+      DB.cashVouchers = DB.cashVouchers.filter(v=>v.id!==id); saveDB();
+      this.renderVouchers(); this.renderDashboard();
+      this.toast('Delete ho gaya','success');
+    });
+  },
+
+  renderInvestments(){
+    document.querySelector('#investTable tbody').innerHTML = [...DB.investments].sort((a,b)=> b.date.localeCompare(a.date)).map(v=>`
+      <tr><td>${v.date}</td><td><span class="badge ${v.type==='investment'?'green':'red'}">${v.type==='investment'?'INVESTMENT':'WITHDRAW'}</span></td><td>Rs ${fmt(v.amount)}</td><td style="text-align:right">${v.note||''}</td>
+      <td><button class="small danger" onclick="UI.deleteInvestment('${v.id}')">Delete</button></td></tr>
+    `).join('') || '<tr><td colspan="5" class="muted">Koi record nahi</td></tr>';
+    document.getElementById('investNetTotal').textContent = 'Rs ' + fmt(Calc.totalInvestment());
+  },
+  deleteInvestment(id){
+    const rec = DB.investments.find(v=>v.id===id);
+    if(rec && this.isDateLocked(rec.date)) return;
+    this.confirmAction('Delete Karein?','Ye record delete ho jayega.', ()=>{
+      DB.investments = DB.investments.filter(v=>v.id!==id); saveDB();
+      this.renderInvestments(); this.renderDashboard();
+      this.toast('Delete ho gaya','success');
+    });
+  },
+
+  /* ---------- SETTINGS ---------- */
+  loadSettingsForm(){
+    document.getElementById('setShopName').value = DB.settings.shopName;
+    document.getElementById('setShopAddress').value = DB.settings.shopAddress||'';
+    document.getElementById('setShopPhone').value = DB.settings.shopPhone||'';
+    document.getElementById('setShopEmail').value = DB.settings.shopEmail||'';
+    document.getElementById('setShopFooter').value = DB.settings.shopFooter||'';
+    document.getElementById('setOpeningCash').value = DB.settings.openingCash;
+    document.getElementById('setNextInv').value = DB.settings.nextInv;
+    document.getElementById('setNextPO').value = DB.settings.nextPO;
+    document.getElementById('setClosingDate').value = DB.settings.closingDate||'';
+    document.getElementById('setAllowNegativeStock').checked = !!DB.settings.allowNegativeStock;
+    const preview = document.getElementById('setShopLogoPreview');
+    if(DB.settings.shopLogo){ preview.src = DB.settings.shopLogo; preview.style.display='inline-block'; }
+    else { preview.src=''; preview.style.display='none'; }
+  },
+  onLogoFileChange(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    if(file.size > 900*1024){ this.toast('Logo file 900KB se choti rakhein','error'); return; }
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      DB.settings.shopLogo = ev.target.result;
+      saveDB();
+      const preview = document.getElementById('setShopLogoPreview');
+      preview.src = DB.settings.shopLogo; preview.style.display='inline-block';
+      this.toast('Logo save ho gaya','success');
+    };
+    reader.readAsDataURL(file);
+  },
+  removeLogo(){
+    DB.settings.shopLogo = '';
+    saveDB();
+    document.getElementById('setShopLogoPreview').src='';
+    document.getElementById('setShopLogoPreview').style.display='none';
+    document.getElementById('setShopLogoFile').value='';
+    this.toast('Logo hata diya gaya','success');
+  },
+  clearClosingDate(){
+    DB.settings.closingDate = '';
+    saveDB();
+    document.getElementById('setClosingDate').value='';
+    this.toast('Closing date hata di gayi','success');
+  },
+  // Returns true (and shows a toast) if the given date falls on/before the closing date lock.
+  isDateLocked(date){
+    const cd = DB.settings.closingDate;
+    if(!cd || !date) return false;
+    if(date <= cd){
+      this.toast(`Ye tareekh (${date}) closed hai (Closing Date: ${cd}). Is se pehle ka koi record add/edit/delete nahi ho sakta.`, 'error');
+      return true;
+    }
+    return false;
+  },
+  saveSettings(){
+    DB.settings.shopName = document.getElementById('setShopName').value.trim() || 'Shop';
+    DB.settings.shopAddress = document.getElementById('setShopAddress').value.trim();
+    DB.settings.shopPhone = document.getElementById('setShopPhone').value.trim();
+    DB.settings.shopEmail = document.getElementById('setShopEmail').value.trim();
+    DB.settings.shopFooter = document.getElementById('setShopFooter').value.trim();
+    DB.settings.openingCash = Number(document.getElementById('setOpeningCash').value)||0;
+    DB.settings.nextInv = Number(document.getElementById('setNextInv').value)||1;
+    DB.settings.nextPO = Number(document.getElementById('setNextPO').value)||1;
+    DB.settings.closingDate = document.getElementById('setClosingDate').value||'';
+    DB.settings.allowNegativeStock = document.getElementById('setAllowNegativeStock').checked;
+    saveDB();
+    document.getElementById('shopNameLabel').textContent = DB.settings.shopName;
+    this.toast('Settings save ho gayi','success');
+    this.renderDashboard();
+  },
+  exportData(){
+    const blob = new Blob([JSON.stringify(DB, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'shop-backup-' + today() + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    this.toast('Backup download ho gaya','success');
+  },
+  importData(){
+    const file = document.getElementById('restoreFile').files[0];
+    if(!file){ this.toast('File chunein','error'); return; }
+    this.confirmAction('Restore Karein?','Ye maujooda sara data overwrite kar dega. Pehle current data ka backup zaroor le lein.', ()=>{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        try{
+          const parsed = JSON.parse(e.target.result);
+          DB = Object.assign(defaultDB(), parsed);
+          migrateStores();
+          saveDB();
+          this.toast('Data restore ho gaya','success');
+          location.reload();
+        }catch(err){
+          this.toast('File sahi format mein nahi hai','error');
+        }
+      };
+      reader.readAsText(file);
+    });
+  },
+  clearAllData(){
+    this.confirmAction('Sara Data Delete Karein?','Ye permanent hai! Pehle backup zaroor download kar lein.', ()=>{
+      localStorage.removeItem(DB_KEY);
+      DB = defaultDB();
+      saveDB();
+      this.toast('Sara data delete ho gaya','success');
+      location.reload();
+    });
+  }
+};
+
+/* =========================================================
+   REPORTS MODULE
+   ========================================================= */
+const Reports = {
+  current: 'summary',
+  bindTabs(){
+    document.querySelectorAll('.tab-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        this.current = btn.dataset.rep;
+        this.renderFilters();
+        this.run();
+      });
+    });
+    this.renderFilters();
+  },
+  renderFilters(){
+    const box = document.getElementById('repFilters');
+    const needsDateRange = ['salerep','purchrep','income','prodhist','prodpurchhist'].includes(this.current);
+    const needsCustomer = this.current==='custledger';
+    const needsSupplier = this.current==='suppledger';
+    const needsCustomerFilter = this.current==='prodhist';
+    const needsSupplierFilter = this.current==='prodpurchhist';
+    const needsItemFilter = this.current==='prodhist' || this.current==='prodpurchhist';
+    let html = '';
+    if(needsDateRange){
+      html += `<div class="field"><label>From</label><input type="date" id="repFrom"></div>
+                <div class="field"><label>To</label><input type="date" id="repTo" value="${today()}"></div>`;
+    }
+    if(needsCustomer){
+      html += `<div class="field" style="min-width:220px"><label>Customer</label><select id="repCustomer">${DB.customers.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>`;
+    }
+    if(needsSupplier){
+      html += `<div class="field" style="min-width:220px"><label>Supplier</label><select id="repSupplier">${DB.suppliers.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>`;
+    }
+    if(needsCustomerFilter){
+      html += `<div class="field" style="min-width:220px"><label>Customer</label><select id="repProdCustomer"><option value="">-- Tamam Customers --</option>${DB.customers.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>`;
+    }
+    if(needsSupplierFilter){
+      html += `<div class="field" style="min-width:220px"><label>Supplier</label><select id="repProdSupplier"><option value="">-- Tamam Suppliers --</option>${DB.suppliers.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>`;
+    }
+    if(needsItemFilter){
+      html += `<div class="field" style="min-width:220px"><label>Product</label><select id="repProdItem"><option value="">-- Tamam Products --</option>${DB.items.map(it=>`<option value="${it.id}">${it.code?it.code+' - ':''}${it.name}${it.nameUrdu?' / '+it.nameUrdu:''}</option>`).join('')}</select></div>`;
+    }
+    box.innerHTML = html;
+  },
+  run(){
+    const out = document.getElementById('repOutput');
+    switch(this.current){
+      case 'summary': out.innerHTML = this.summary(); break;
+      case 'salerep': out.innerHTML = this.saleReport(); break;
+      case 'prodhist': out.innerHTML = this.prodHistory(); break;
+      case 'purchrep': out.innerHTML = this.purchReport(); break;
+      case 'prodpurchhist': out.innerHTML = this.prodPurchHistory(); break;
+      case 'custledger': out.innerHTML = this.custLedger(); break;
+      case 'suppledger': out.innerHTML = this.suppLedger(); break;
+      case 'stockrep': out.innerHTML = this.stockReport(); break;
+      case 'income': out.innerHTML = this.incomeStatement(); break;
+      case 'trial': out.innerHTML = this.trialBalance(); break;
+      case 'balance': out.innerHTML = this.balanceSheet(); break;
+    }
+  },
+  getRange(){
+    const from = document.getElementById('repFrom') ? document.getElementById('repFrom').value : '';
+    const to = document.getElementById('repTo') ? document.getElementById('repTo').value : '';
+    return {from, to};
+  },
+  summary(){
+    const cash = Calc.cashInHand(), recv = Calc.totalReceivable(), pay = Calc.totalPayable(), stockVal = Calc.stockValue();
+    const totalSales = Calc.salesTotal(), totalPurch = Calc.purchasesTotal(), totalExp = Calc.expensesTotal();
+    const profit = Calc.netProfit();
+    return `<h2>Business Summary (All Time)</h2>
+      <table>
+        <tr><td>Cash In Hand</td><td>Rs ${fmt(cash)}</td></tr>
+        <tr><td>Customers Se Wusool Karna</td><td>Rs ${fmt(recv)}</td></tr>
+        <tr><td>Suppliers Ko Dena</td><td>Rs ${fmt(pay)}</td></tr>
+        <tr><td>Stock Value (Cost Par)</td><td>Rs ${fmt(stockVal)}</td></tr>
+        <tr><td>Total Sales (All Time)</td><td>Rs ${fmt(totalSales)}</td></tr>
+        <tr><td>Total Purchases (All Time)</td><td>Rs ${fmt(totalPurch)}</td></tr>
+        <tr><td>Total Expenses (All Time)</td><td>Rs ${fmt(totalExp)}</td></tr>
+        <tr style="font-weight:800"><td>Net Profit (All Time)</td><td>Rs ${fmt(profit)}</td></tr>
+      </table>`;
+  },
+  saleReport(){
+    const {from,to} = this.getRange();
+    const rows = DB.sales.filter(s=> Calc.inRange(s.date,from,to)).sort((a,b)=>a.date.localeCompare(b.date));
+    const total = rows.reduce((s,r)=>s+r.grandTotal,0);
+    const paid = rows.reduce((s,r)=>s+r.paidAmount,0);
+    return `<h2>Sale Report ${from||to?`(${from||'...'} se ${to||'...'})`:'(Sab)'}</h2>
+      <div class="table-wrap"><table><thead><tr><th>Inv#</th><th>Tareekh</th><th>Customer</th><th>Total</th><th>Paid</th><th>Baqaya</th></tr></thead>
+      <tbody>${rows.map(s=>`<tr><td>${s.invNo}</td><td>${s.date}</td><td style="text-align:right">${UI.custName(s.customerId)}</td><td>Rs ${fmt(s.grandTotal)}</td><td>Rs ${fmt(s.paidAmount)}</td><td>Rs ${fmt(s.grandTotal-s.paidAmount)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Koi data nahi</td></tr>'}</tbody>
+      <tfoot><tr style="font-weight:800"><td colspan="3">Total</td><td>Rs ${fmt(total)}</td><td>Rs ${fmt(paid)}</td><td>Rs ${fmt(total-paid)}</td></tr></tfoot>
+      </table></div>`;
+  },
+  prodHistory(){
+    const {from,to} = this.getRange();
+    const custFilter = document.getElementById('repProdCustomer') ? document.getElementById('repProdCustomer').value : '';
+    const itemFilter = document.getElementById('repProdItem') ? document.getElementById('repProdItem').value : '';
+    const sales = DB.sales.filter(s=> Calc.inRange(s.date,from,to) && (!custFilter || s.customerId===custFilter));
+    let rows = [];
+    sales.forEach(s=>{
+      (s.items||[]).forEach(li=>{
+        if(itemFilter && li.itemId!==itemFilter) return;
+        const it = Calc.itemById(li.itemId);
+        rows.push({
+          customerId: s.customerId || '',
+          customerName: UI.custName(s.customerId),
+          date: s.date,
+          invNo: s.invNo,
+          itemName: it ? (it.name + (it.nameUrdu?' / '+it.nameUrdu:'')) : 'Unknown Item',
+          code: it ? (it.code||'') : '',
+          qty: Number(li.qty)||0,
+          rate: Number(li.rate)||0,
+          amount: Number(li.amount)||0
+        });
+      });
+    });
+    const heading = `Product Sale History ${from||to?`(${from||'...'} se ${to||'...'})`:'(Sab)'}`;
+    if(!rows.length) return `<h2>${heading}</h2><p class="muted">Koi data nahi</p>`;
+    const groups = {};
+    rows.forEach(r=>{
+      const key = r.customerId || '__cash__';
+      if(!groups[key]) groups[key] = {name:r.customerName, rows:[]};
+      groups[key].rows.push(r);
+    });
+    const groupKeys = Object.keys(groups).sort((a,b)=> groups[a].name.localeCompare(groups[b].name));
+    let grandQty=0, grandAmt=0;
+    let html = `<h2>${heading}</h2>`;
+    groupKeys.forEach(key=>{
+      const g = groups[key];
+      g.rows.sort((a,b)=> a.date.localeCompare(b.date));
+      const custQty = g.rows.reduce((s,r)=>s+r.qty,0);
+      const custAmt = g.rows.reduce((s,r)=>s+r.amount,0);
+      grandQty += custQty; grandAmt += custAmt;
+      html += `<h3 style="margin:16px 0 6px">${g.name}</h3>
+        <div class="table-wrap"><table><thead><tr><th>Tareekh</th><th>Inv#</th><th style="text-align:right">Product</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+        <tbody>${g.rows.map(r=>`<tr><td>${r.date}</td><td>${r.invNo}</td><td style="text-align:right">${r.itemName}${r.code?' ('+r.code+')':''}</td><td>${r.qty}</td><td>Rs ${fmt(r.rate)}</td><td>Rs ${fmt(r.amount)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr style="font-weight:800"><td colspan="3">Subtotal</td><td>${custQty}</td><td></td><td>Rs ${fmt(custAmt)}</td></tr></tfoot>
+        </table></div>`;
+    });
+    html += `<div class="table-wrap" style="margin-top:14px"><table><tr style="font-weight:800"><td>Grand Total Qty</td><td>${grandQty}</td></tr><tr style="font-weight:800"><td>Grand Total Amount</td><td>Rs ${fmt(grandAmt)}</td></tr></table></div>`;
+    return html;
+  },
+  purchReport(){
+    const {from,to} = this.getRange();
+    const rows = DB.purchases.filter(p=> Calc.inRange(p.date,from,to)).sort((a,b)=>a.date.localeCompare(b.date));
+    const total = rows.reduce((s,r)=>s+r.grandTotal,0);
+    const paid = rows.reduce((s,r)=>s+r.paidAmount,0);
+    return `<h2>Purchase Report ${from||to?`(${from||'...'} se ${to||'...'})`:'(Sab)'}</h2>
+      <div class="table-wrap"><table><thead><tr><th>PO#</th><th>Tareekh</th><th>Supplier</th><th>Total</th><th>Paid</th><th>Baqaya</th></tr></thead>
+      <tbody>${rows.map(p=>`<tr><td>${p.poNo}</td><td>${p.date}</td><td style="text-align:right">${UI.suppName(p.supplierId)}</td><td>Rs ${fmt(p.grandTotal)}</td><td>Rs ${fmt(p.paidAmount)}</td><td>Rs ${fmt(p.grandTotal-p.paidAmount)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Koi data nahi</td></tr>'}</tbody>
+      <tfoot><tr style="font-weight:800"><td colspan="3">Total</td><td>Rs ${fmt(total)}</td><td>Rs ${fmt(paid)}</td><td>Rs ${fmt(total-paid)}</td></tr></tfoot>
+      </table></div>`;
+  },
+  prodPurchHistory(){
+    const {from,to} = this.getRange();
+    const suppFilter = document.getElementById('repProdSupplier') ? document.getElementById('repProdSupplier').value : '';
+    const itemFilter = document.getElementById('repProdItem') ? document.getElementById('repProdItem').value : '';
+    const purchases = DB.purchases.filter(p=> Calc.inRange(p.date,from,to) && (!suppFilter || p.supplierId===suppFilter));
+    let rows = [];
+    purchases.forEach(p=>{
+      (p.items||[]).forEach(li=>{
+        if(itemFilter && li.itemId!==itemFilter) return;
+        const it = Calc.itemById(li.itemId);
+        rows.push({
+          supplierId: p.supplierId || '',
+          supplierName: UI.suppName(p.supplierId),
+          date: p.date,
+          poNo: p.poNo,
+          itemName: it ? (it.name + (it.nameUrdu?' / '+it.nameUrdu:'')) : 'Unknown Item',
+          code: it ? (it.code||'') : '',
+          qty: Number(li.qty)||0,
+          rate: Number(li.rate)||0,
+          amount: Number(li.amount)||0
+        });
+      });
+    });
+    const heading = `Product Purchase History ${from||to?`(${from||'...'} se ${to||'...'})`:'(Sab)'}`;
+    if(!rows.length) return `<h2>${heading}</h2><p class="muted">Koi data nahi</p>`;
+    const groups = {};
+    rows.forEach(r=>{
+      const key = r.supplierId || '__unknown__';
+      if(!groups[key]) groups[key] = {name:r.supplierName, rows:[]};
+      groups[key].rows.push(r);
+    });
+    const groupKeys = Object.keys(groups).sort((a,b)=> groups[a].name.localeCompare(groups[b].name));
+    let grandQty=0, grandAmt=0;
+    let html = `<h2>${heading}</h2>`;
+    groupKeys.forEach(key=>{
+      const g = groups[key];
+      g.rows.sort((a,b)=> a.date.localeCompare(b.date));
+      const suppQty = g.rows.reduce((s,r)=>s+r.qty,0);
+      const suppAmt = g.rows.reduce((s,r)=>s+r.amount,0);
+      grandQty += suppQty; grandAmt += suppAmt;
+      html += `<h3 style="margin:16px 0 6px">${g.name}</h3>
+        <div class="table-wrap"><table><thead><tr><th>Tareekh</th><th>PO#</th><th style="text-align:right">Product</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+        <tbody>${g.rows.map(r=>`<tr><td>${r.date}</td><td>${r.poNo}</td><td style="text-align:right">${r.itemName}${r.code?' ('+r.code+')':''}</td><td>${r.qty}</td><td>Rs ${fmt(r.rate)}</td><td>Rs ${fmt(r.amount)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr style="font-weight:800"><td colspan="3">Subtotal</td><td>${suppQty}</td><td></td><td>Rs ${fmt(suppAmt)}</td></tr></tfoot>
+        </table></div>`;
+    });
+    html += `<div class="table-wrap" style="margin-top:14px"><table><tr style="font-weight:800"><td>Grand Total Qty</td><td>${grandQty}</td></tr><tr style="font-weight:800"><td>Grand Total Amount</td><td>Rs ${fmt(grandAmt)}</td></tr></table></div>`;
+    return html;
+  },
+  custLedger(){
+    const custId = document.getElementById('repCustomer') ? document.getElementById('repCustomer').value : (DB.customers[0] && DB.customers[0].id);
+    if(!custId) return '<p class="muted">Koi customer nahi hai</p>';
+    const c = Calc.customerById(custId);
+    let entries = [];
+    entries.push({date:'-', detail:'Opening Balance', debit: Number(c.openingBalance)>0?c.openingBalance:0, credit: Number(c.openingBalance)<0?-c.openingBalance:0, ts:''});
+    DB.sales.filter(s=>s.customerId===custId).forEach(s=>{
+      entries.push({date:s.date, detail:'Sale Invoice #'+s.invNo, debit:s.grandTotal, credit:0, ts:s.id});
+      if(s.paidAmount>0) entries.push({date:s.date, detail:'Payment with Invoice #'+s.invNo, debit:0, credit:s.paidAmount, ts:s.id+'p'});
+    });
+    DB.receipts.filter(r=>r.customerId===custId).forEach(r=>{
+      entries.push({date:r.date, detail:'Wusooli ('+r.method+') '+(r.note||''), debit:0, credit:r.amount, ts:r.id});
+    });
+    entries.sort((a,b)=> a.date.localeCompare(b.date));
+    let running = 0;
+    const rowsHtml = entries.map(e=>{
+      running += (e.debit - e.credit);
+      return `<tr><td>${e.date}</td><td style="text-align:right">${e.detail}</td><td>${e.debit?fmt(e.debit):''}</td><td>${e.credit?fmt(e.credit):''}</td><td style="font-weight:700">Rs ${fmt(running)}</td></tr>`;
+    }).join('');
+    return `<h2>Customer Ledger: ${c.name}</h2>
+      <div class="table-wrap"><table><thead><tr><th>Tareekh</th><th>Tafseel</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+      <tbody>${rowsHtml || '<tr><td colspan="5" class="muted">Koi transaction nahi</td></tr>'}</tbody></table></div>
+      <p style="margin-top:10px;font-weight:700">Final Balance: Rs ${fmt(Calc.customerBalance(custId))} ${Calc.customerBalance(custId)>0?'(Customer ne dena hai)':'(Advance/Clear)'}</p>`;
+  },
+  suppLedger(){
+    const suppId = document.getElementById('repSupplier') ? document.getElementById('repSupplier').value : (DB.suppliers[0] && DB.suppliers[0].id);
+    if(!suppId) return '<p class="muted">Koi supplier nahi hai</p>';
+    const s = Calc.supplierById(suppId);
+    let entries = [];
+    entries.push({date:'-', detail:'Opening Balance', debit:0, credit: Number(s.openingBalance)>0?s.openingBalance:0, ts:''});
+    DB.purchases.filter(p=>p.supplierId===suppId).forEach(p=>{
+      entries.push({date:p.date, detail:'Purchase Invoice #'+p.poNo, debit:0, credit:p.grandTotal, ts:p.id});
+      if(p.paidAmount>0) entries.push({date:p.date, detail:'Payment with PO #'+p.poNo, debit:p.paidAmount, credit:0, ts:p.id+'p'});
+    });
+    DB.paymentsOut.filter(r=>r.supplierId===suppId).forEach(r=>{
+      entries.push({date:r.date, detail:'Adaigi ('+r.method+') '+(r.note||''), debit:r.amount, credit:0, ts:r.id});
+    });
+    entries.sort((a,b)=> a.date.localeCompare(b.date));
+    let running = 0;
+    const rowsHtml = entries.map(e=>{
+      running += (e.credit - e.debit);
+      return `<tr><td>${e.date}</td><td style="text-align:right">${e.detail}</td><td>${e.debit?fmt(e.debit):''}</td><td>${e.credit?fmt(e.credit):''}</td><td style="font-weight:700">Rs ${fmt(running)}</td></tr>`;
+    }).join('');
+    return `<h2>Supplier Ledger: ${s.name}</h2>
+      <div class="table-wrap"><table><thead><tr><th>Tareekh</th><th>Tafseel</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+      <tbody>${rowsHtml || '<tr><td colspan="5" class="muted">Koi transaction nahi</td></tr>'}</tbody></table></div>
+      <p style="margin-top:10px;font-weight:700">Final Balance: Rs ${fmt(Calc.supplierBalance(suppId))} ${Calc.supplierBalance(suppId)>0?'(Aap ne dena hai)':'(Advance/Clear)'}</p>`;
+  },
+  stockReport(){
+    const rows = DB.items.map(it=>{
+      const purchased = DB.purchases.reduce((s,p)=> s + p.items.filter(li=>li.itemId===it.id).reduce((s2,li)=>s2+Number(li.qty),0), 0);
+      const sold = DB.sales.reduce((s,sa)=> s + sa.items.filter(li=>li.itemId===it.id).reduce((s2,li)=>s2+Number(li.qty),0), 0);
+      const closing = Calc.stockQty(it.id);
+      const opening = DB.stores.reduce((s,st)=> s + (Number((it.openingStockByStore||{})[st.id])||0), 0);
+      return {it, opening, purchased, sold, closing, value: closing*it.purchasePrice};
+    });
+    const totalValue = rows.reduce((s,r)=>s+r.value,0);
+    return `<h2>Stock Report (Store-Wise)</h2>
+      <div class="table-wrap"><table><thead><tr><th>Item</th><th>Opening</th><th>Purchased</th><th>Sold</th>
+      ${DB.stores.map(st=>`<th>${st.name} Stock</th>`).join('')}
+      <th>Total Closing</th><th>Value</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td style="text-align:right">${r.it.name}</td><td>${fmt(r.opening)}</td><td>${fmt(r.purchased)}</td><td>${fmt(r.sold)}</td>
+      ${DB.stores.map(st=>`<td>${fmt(Calc.stockQty(r.it.id, st.id))}</td>`).join('')}
+      <td style="font-weight:700">${fmt(r.closing)}</td><td>Rs ${fmt(r.value)}</td></tr>`).join('') || `<tr><td colspan="${6+DB.stores.length}" class="muted">Koi item nahi</td></tr>`}</tbody>
+      <tfoot><tr style="font-weight:800"><td colspan="${5+DB.stores.length}">Total Stock Value</td><td>Rs ${fmt(totalValue)}</td></tr></tfoot>
+      </table></div>`;
+  },
+  incomeStatement(){
+    const {from,to} = this.getRange();
+    const sales = Calc.salesTotal(from,to);
+    const cogs = Calc.cogs(from,to);
+    const gross = sales - cogs;
+    const exp = Calc.expensesTotal(from,to);
+    const net = gross - exp;
+    return `<h2>Income Statement ${from||to?`(${from||'...'} se ${to||'...'})`:'(All Time)'}</h2>
+      <table>
+        <tr><td>Sales Revenue</td><td>Rs ${fmt(sales)}</td></tr>
+        <tr><td>Cost of Goods Sold</td><td>Rs ${fmt(cogs)}</td></tr>
+        <tr style="font-weight:700"><td>Gross Profit</td><td>Rs ${fmt(gross)}</td></tr>
+        <tr><td>Expenses</td><td>Rs ${fmt(exp)}</td></tr>
+        <tr style="font-weight:800;color:${net>=0?'var(--accent)':'var(--danger)'}"><td>Net Profit</td><td>Rs ${fmt(net)}</td></tr>
+      </table>`;
+  },
+  trialBalance(){
+    const cash = Calc.cashInHand();
+    const stockVal = Calc.stockValue();
+    const recv = Calc.totalReceivable();
+    const pay = Calc.totalPayable();
+    const totalPurchAllTime = Calc.purchasesTotal();
+    const totalExpAllTime = Calc.expensesTotal();
+    const totalSalesAllTime = Calc.salesTotal();
+    const drItems = [
+      {name:'Cash In Hand', amt:cash},
+      {name:'Stock (Closing)', amt:stockVal},
+      {name:'Customers Receivable', amt:recv},
+      {name:'Purchases (All Time)', amt:totalPurchAllTime},
+      {name:'Expenses (All Time)', amt:totalExpAllTime}
+    ];
+    const crItemsFixed = [
+      {name:'Suppliers Payable', amt:pay},
+      {name:'Sales (All Time)', amt:totalSalesAllTime}
+    ];
+    const drTotal = drItems.reduce((s,i)=>s+i.amt,0);
+    const crFixedTotal = crItemsFixed.reduce((s,i)=>s+i.amt,0);
+    const openingCapital = drTotal - crFixedTotal;
+    const crItems = [...crItemsFixed, {name:'Capital (Opening + Retained)', amt:openingCapital}];
+    const crTotal = crItems.reduce((s,i)=>s+i.amt,0);
+    return `<h2>Trial Balance</h2>
+      <div class="table-wrap"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead>
+      <tbody>
+        ${drItems.map(i=>`<tr><td style="text-align:right">${i.name}</td><td>Rs ${fmt(i.amt)}</td><td></td></tr>`).join('')}
+        ${crItems.map(i=>`<tr><td style="text-align:right">${i.name}</td><td></td><td>Rs ${fmt(i.amt)}</td></tr>`).join('')}
+      </tbody>
+      <tfoot><tr style="font-weight:800"><td>Total</td><td>Rs ${fmt(drTotal)}</td><td>Rs ${fmt(crTotal)}</td></tr></tfoot>
+      </table></div>
+      <p class="muted" style="margin-top:8px">Note: "Capital" ek balancing figure hai jo shuru ke opening balances aur profit ko cover karti hai.</p>`;
+  },
+  balanceSheet(){
+    const cash = Calc.cashInHand();
+    const stockVal = Calc.stockValue();
+    const recv = Calc.totalReceivable();
+    const pay = Calc.totalPayable();
+    const totalAssets = cash + stockVal + recv;
+    const capital = totalAssets - pay;
+    const netProfitAllTime = Calc.netProfit();
+    return `<h2>Balance Sheet (Aaj Tak)</h2>
+      <div class="row" style="gap:24px">
+        <div style="flex:1;min-width:280px">
+          <h3 style="font-size:14px">Assets</h3>
+          <table>
+            <tr><td>Cash In Hand</td><td>Rs ${fmt(cash)}</td></tr>
+            <tr><td>Stock Value</td><td>Rs ${fmt(stockVal)}</td></tr>
+            <tr><td>Customers Receivable</td><td>Rs ${fmt(recv)}</td></tr>
+            <tr style="font-weight:800"><td>Total Assets</td><td>Rs ${fmt(totalAssets)}</td></tr>
+          </table>
+        </div>
+        <div style="flex:1;min-width:280px">
+          <h3 style="font-size:14px">Liabilities + Capital</h3>
+          <table>
+            <tr><td>Suppliers Payable</td><td>Rs ${fmt(pay)}</td></tr>
+            <tr><td>Capital / Equity (Calculated)</td><td>Rs ${fmt(capital)}</td></tr>
+            <tr style="font-weight:800"><td>Total</td><td>Rs ${fmt(pay+capital)}</td></tr>
+          </table>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:10px">Net Profit (All Time, memo): Rs ${fmt(netProfitAllTime)}. Balance sheet hamesha barabar hoti hai kyun ke Capital ek calculated (balancing) figure hai.</p>`;
+  }
+};
+
+/* =========================================================
+   PRINT MODULE - Thermal (small printer) & A4 invoice printing
+   ========================================================= */
+const I18N = {
+  en:{ saleInvoice:'Sale Invoice', purchInvoice:'Purchase Invoice', number:'Number', date:'Date', billTo:'Bill To (Customer)', billFrom:'Bill From (Supplier)',
+       item:'Item', qty:'Qty', rate:'Rate', amount:'Amount', total:'Total', discount:'Discount', grandTotal:'Grand Total',
+       paid:'Paid Amount', balance:'Balance', cash:'Cash', credit:'Credit', type:'Type', thanks:'Shukriya!' },
+  ur:{ saleInvoice:'بیچنے کا بل', purchInvoice:'خریداری کا بل', number:'نمبر', date:'تاریخ', billTo:'خریدار', billFrom:'سپلائر',
+       item:'آئٹم', qty:'تعداد', rate:'ریٹ', amount:'رقم', total:'کل رقم', discount:'رعایت', grandTotal:'مجموعی رقم',
+       paid:'ادا شدہ رقم', balance:'باقی رقم', cash:'نقد', credit:'ادھار', type:'قسم', thanks:'شکریہ!' }
+};
+
+const Print = {
+  doc(kind, id, mode, lang){
+    lang = (lang==='ur') ? 'ur' : 'en';
+    const t = I18N[lang];
+    const data = kind==='sale' ? DB.sales.find(s=>s.id===id) : DB.purchases.find(p=>p.id===id);
+    if(!data){ UI.toast('Record nahi mila','error'); return; }
+    const partyName = kind==='sale' ? UI.custName(data.customerId) : UI.suppName(data.supplierId);
+    const docNo = kind==='sale' ? data.invNo : data.poNo;
+    const docLabel = kind==='sale' ? t.saleInvoice : t.purchInvoice;
+    const s = DB.settings;
+    const itemsRows = data.items.map((li,idx)=>{
+      const item = Calc.itemById(li.itemId);
+      const nm = item ? ((lang==='ur' && item.nameUrdu) ? item.nameUrdu : item.name) : 'Item';
+      return {sr:idx+1, name:nm, qty:li.qty, rate:li.rate, amt:li.amount};
+    });
+    const balance = data.grandTotal - data.paidAmount;
+    const typeLabel = (data.type==='credit') ? t.credit : t.cash;
+
+    const html = mode==='thermal' ? this.thermalTemplate(s, docLabel, docNo, data, partyName, itemsRows, balance, lang, t, typeLabel)
+                                   : this.a4Template(s, docLabel, docNo, data, partyName, itemsRows, balance, kind, lang, t, typeLabel);
+
+    const win = window.open('', '_blank', 'width=420,height=650');
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(()=>{ win.print(); }, 300);
+  },
+
+  thermalTemplate(s, docLabel, docNo, data, partyName, itemsRows, balance, lang, t, typeLabel){
+    const rtl = lang==='ur';
+    return `<!DOCTYPE html><html dir="${rtl?'rtl':'ltr'}"><head><meta charset="UTF-8"><title>${docLabel} #${docNo}</title>
+    ${rtl?'<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap" rel="stylesheet">':''}
+    <style>
+      @page{ size: 80mm 3276mm; margin: 0 3.95mm; }
+      body{ width:72.1mm; font-family:${rtl?"'Noto Nastaliq Urdu',":''}'Segoe UI',Arial,sans-serif; font-size:${rtl?'13px':'11.5px'}; color:#000; margin:0; }
+      .center{text-align:center;}
+      h2{margin:2px 0; font-size:14px;}
+      p{margin:2px 0;}
+      hr{border:none; border-top:1px dashed #000; margin:5px 0;}
+      table{width:100%; border-collapse:collapse; font-size:${rtl?'12.5px':'11px'};}
+      th, td{padding:2px 0; text-align:${rtl?'right':'left'};}
+      th:last-child, td:last-child{text-align:${rtl?'left':'right'};}
+      .totals td{font-weight:bold;}
+      .grand{font-size:13px;}
+      .footer{text-align:center; margin-top:8px; font-size:11px;}
+    </style></head><body>
+      <div class="center">
+        ${s.shopLogo?`<img src="${s.shopLogo}" style="max-height:55px;max-width:70mm;margin-bottom:4px">`:''}
+        <h2>${s.shopName||'Shop'}</h2>
+        ${s.shopAddress?`<p>${s.shopAddress}</p>`:''}
+        ${s.shopPhone?`<p>Ph: ${s.shopPhone}</p>`:''}
+      </div>
+      <hr>
+      <p><b>${docLabel} #${docNo}</b></p>
+      <p>${t.date}: ${data.date}</p>
+      <p>${partyName} (${typeLabel})</p>
+      <hr>
+      <table>
+        <thead><tr><th>${t.item}</th><th>${t.qty}</th><th>${t.rate}</th><th>${t.amount}</th></tr></thead>
+        <tbody>
+          ${itemsRows.map(r=>`<tr><td>${r.name}</td><td>${fmt(r.qty)}</td><td>${fmt(r.rate)}</td><td>${fmt(r.amt)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <hr>
+      <table class="totals">
+        <tr><td>${t.total}</td><td></td><td></td><td>${fmt(data.subtotal)}</td></tr>
+        <tr><td>${t.discount}</td><td></td><td></td><td>${fmt(data.discount)}</td></tr>
+        <tr class="grand"><td>${t.grandTotal}</td><td></td><td></td><td>${fmt(data.grandTotal)}</td></tr>
+        <tr><td>${t.paid}</td><td></td><td></td><td>${fmt(data.paidAmount)}</td></tr>
+        <tr><td>${t.balance}</td><td></td><td></td><td>${fmt(balance)}</td></tr>
+      </table>
+      <hr>
+      <div class="footer">${s.shopFooter||t.thanks}</div>
+    </body></html>`;
+  },
+
+  a4Template(s, docLabel, docNo, data, partyName, itemsRows, balance, kind, lang, t, typeLabel){
+    const rtl = lang==='ur';
+    const partyLabel = kind==='sale' ? t.billTo : t.billFrom;
+    return `<!DOCTYPE html><html dir="${rtl?'rtl':'ltr'}"><head><meta charset="UTF-8"><title>${docLabel} #${docNo}</title>
+    ${rtl?'<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap" rel="stylesheet">':''}
+    <style>
+      @page{ size:A4; margin:15mm; }
+      body{ font-family:${rtl?"'Noto Nastaliq Urdu',":''}'Segoe UI',Arial,sans-serif; color:#1f2d3a; font-size:${rtl?'16px':'14px'}; }
+      .header{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #1e5f8c; padding-bottom:14px; margin-bottom:20px; }
+      .header h1{ margin:0 0 6px; font-size:24px; color:#1e5f8c; }
+      .header p{ margin:2px 0; font-size:12.5px; color:#555; }
+      .doc-title{ text-align:${rtl?'right':'left'}; }
+      .doc-title h2{ margin:0; font-size:20px; }
+      .doc-title p{ margin:2px 0; font-size:13px; }
+      .party-box{ margin-bottom:18px; padding:12px 14px; background:#f4f6f8; border-radius:6px; }
+      .party-box .label{ font-size:11px; color:#888; text-transform:uppercase; }
+      .party-box .name{ font-size:16px; font-weight:700; }
+      table{ width:100%; border-collapse:collapse; margin-bottom:18px; }
+      th, td{ padding:9px 10px; border-bottom:1px solid #e0e4e8; text-align:${rtl?'left':'right'}; }
+      th:first-child, td:first-child{ text-align:${rtl?'left':'right'}; }
+      th{ background:#f0f3f5; font-size:12.5px; text-transform:uppercase; color:#555; }
+      .totals-table{ width:320px; margin-${rtl?'left':'right'}:auto; margin-${rtl?'right':'left'}:0; float:${rtl?'right':'left'}; }
+      .totals-table td{ border:none; padding:6px 10px; }
+      .grand-row td{ font-size:17px; font-weight:800; color:#1e5f8c; border-top:2px solid #1e5f8c; }
+      .clearfix{ clear:both; }
+      .footer{ margin-top:60px; text-align:center; color:#777; font-size:12.5px; border-top:1px solid #e0e4e8; padding-top:14px; }
+    </style></head><body>
+      <div class="header">
+        <div style="display:flex;align-items:flex-start;gap:14px">
+          ${s.shopLogo?`<img src="${s.shopLogo}" style="max-height:70px;max-width:140px;object-fit:contain">`:''}
+          <div>
+            <h1>${s.shopName||'Shop'}</h1>
+            ${s.shopAddress?`<p>${s.shopAddress}</p>`:''}
+            ${s.shopPhone?`<p>Phone: ${s.shopPhone}</p>`:''}
+            ${s.shopEmail?`<p>Email: ${s.shopEmail}</p>`:''}
+          </div>
+        </div>
+        <div class="doc-title">
+          <h2>${docLabel}</h2>
+          <p>${t.number}: <b>#${docNo}</b></p>
+          <p>${t.date}: <b>${data.date}</b></p>
+          <p>${t.type}: <b>${typeLabel}</b></p>
+        </div>
+      </div>
+      <div class="party-box">
+        <div class="label">${partyLabel}</div>
+        <div class="name">${partyName}</div>
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>${t.item}</th><th>${t.qty}</th><th>${t.rate}</th><th>${t.amount}</th></tr></thead>
+        <tbody>
+          ${itemsRows.map(r=>`<tr><td>${r.sr}</td><td>${r.name}</td><td>${fmt(r.qty)}</td><td>Rs ${fmt(r.rate)}</td><td>Rs ${fmt(r.amt)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <table class="totals-table">
+        <tr><td>${t.total}</td><td>Rs ${fmt(data.subtotal)}</td></tr>
+        <tr><td>${t.discount}</td><td>Rs ${fmt(data.discount)}</td></tr>
+        <tr class="grand-row"><td>${t.grandTotal}</td><td>Rs ${fmt(data.grandTotal)}</td></tr>
+        <tr><td>${t.paid}</td><td>Rs ${fmt(data.paidAmount)}</td></tr>
+        <tr><td>${t.balance}</td><td>Rs ${fmt(balance)}</td></tr>
+      </table>
+      <div class="clearfix"></div>
+      <div class="footer">${s.shopFooter||t.thanks}</div>
+    </body></html>`;
+  }
+};
+
+/* =========================================================
+   IMPORT / EXPORT MODULE (CSV / Excel / PDF)
+   ========================================================= */
+const ImportExport = {
+  downloadCSV(filename, rows){
+    const csv = rows.map(r=> r.map(c=>{
+      c = (c===undefined||c===null) ? '' : String(c);
+      if(c.includes(',')||c.includes('"')||c.includes('\n')) c = '"'+c.replace(/"/g,'""')+'"';
+      return c;
+    }).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  },
+  exportItemsCSV(){
+    const rows = [['Name','NameUrdu','Code','Unit','PurchasePrice','SalePrice','MinStock','TotalStock']];
+    DB.items.forEach(it=> rows.push([it.name, it.nameUrdu||'', it.code||'', it.unit, it.purchasePrice, it.salePrice, it.minStock, Calc.stockQty(it.id)]));
+    this.downloadCSV('items-'+today()+'.csv', rows);
+    UI.toast('Items CSV export ho gaya','success');
+  },
+  exportCustomersCSV(){
+    const rows = [['Name','Phone','Address','OpeningBalance','CurrentBalance']];
+    DB.customers.forEach(c=> rows.push([c.name, c.phone||'', c.address||'', c.openingBalance, Calc.customerBalance(c.id)]));
+    this.downloadCSV('customers-'+today()+'.csv', rows);
+    UI.toast('Customers CSV export ho gaya','success');
+  },
+  exportSuppliersCSV(){
+    const rows = [['Name','Phone','Address','OpeningBalance','CurrentBalance']];
+    DB.suppliers.forEach(s=> rows.push([s.name, s.phone||'', s.address||'', s.openingBalance, Calc.supplierBalance(s.id)]));
+    this.downloadCSV('suppliers-'+today()+'.csv', rows);
+    UI.toast('Suppliers CSV export ho gaya','success');
+  },
+
+  // Parse a simple CSV string into array-of-rows (handles quoted commas).
+  parseCSVText(text){
+    const rows = [];
+    let row = [], field = '', inQuotes = false;
+    for(let i=0;i<text.length;i++){
+      const ch = text[i];
+      if(inQuotes){
+        if(ch === '"'){
+          if(text[i+1] === '"'){ field+='"'; i++; } else inQuotes = false;
+        } else field += ch;
+      } else {
+        if(ch === '"') inQuotes = true;
+        else if(ch === ','){ row.push(field); field=''; }
+        else if(ch === '\n' || ch === '\r'){
+          if(field!=='' || row.length){ row.push(field); rows.push(row); }
+          field=''; row=[];
+          if(ch==='\r' && text[i+1]==='\n') i++;
+        } else field += ch;
+      }
+    }
+    if(field!=='' || row.length){ row.push(field); rows.push(row); }
+    return rows.filter(r=> r.some(c=> String(c).trim()!==''));
+  },
+
+  // Extract rows of data from a File depending on extension. Calls back with array-of-rows.
+  fileToRows(file, cb){
+    const ext = (file.name.split('.').pop()||'').toLowerCase();
+    if(ext==='csv' || ext==='txt'){
+      const reader = new FileReader();
+      reader.onload = e=> cb(this.parseCSVText(e.target.result));
+      reader.readAsText(file);
+    } else if(ext==='xlsx' || ext==='xls'){
+      if(typeof XLSX==='undefined'){ UI.toast('Excel library load nahi hui, internet check karein','error'); return; }
+      const reader = new FileReader();
+      reader.onload = e=>{
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, {header:1, raw:false, defval:''});
+        cb(rows.filter(r=> r.some(c=> String(c).trim()!=='')));
+      };
+      reader.readAsArrayBuffer(file);
+    } else if(ext==='pdf'){
+      if(typeof pdfjsLib==='undefined'){ UI.toast('PDF library load nahi hui, internet check karein','error'); return; }
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const reader = new FileReader();
+      reader.onload = async (e)=>{
+        try{
+          const pdf = await pdfjsLib.getDocument({data:new Uint8Array(e.target.result)}).promise;
+          const lines = [];
+          for(let p=1;p<=pdf.numPages;p++){
+            const page = await pdf.getPage(p);
+            const content = await page.getTextContent();
+            let curY = null, curLine = [];
+            content.items.forEach(it=>{
+              const y = Math.round(it.transform[5]);
+              if(curY===null || Math.abs(y-curY)>3){
+                if(curLine.length) lines.push(curLine.join(' '));
+                curLine = [it.str]; curY = y;
+              } else curLine.push(it.str);
+            });
+            if(curLine.length) lines.push(curLine.join(' '));
+          }
+          // Best-effort: split each PDF line on commas, tabs, or 2+ spaces
+          const rows = lines.map(l=> l.split(/\t|,|\s{2,}/).map(c=>c.trim()).filter(c=>c!==''))
+                             .filter(r=> r.length>0);
+          UI.toast('PDF se text nikala gaya (best-effort), data check zaroor karein','success');
+          cb(rows);
+        }catch(err){
+          console.error(err);
+          UI.toast('PDF parse nahi ho saka','error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      UI.toast('Sirf CSV, Excel (.xlsx/.xls) ya PDF file import karein','error');
+    }
+  },
+
+  // Detect + skip a header row if the first cell of the first row is non-numeric text
+  // that matches common header words; otherwise treat all rows as data.
+  stripHeader(rows, headerWords){
+    if(!rows.length) return rows;
+    const first = rows[0].map(c=> String(c).toLowerCase().trim());
+    const looksHeader = headerWords.some(w=> first.includes(w));
+    return looksHeader ? rows.slice(1) : rows;
+  },
+
+  importItems(){
+    const file = document.getElementById('itemImportFile').files[0];
+    if(!file){ UI.toast('File chunein','error'); return; }
+    this.fileToRows(file, rows=>{
+      rows = this.stripHeader(rows, ['name','item','item name']);
+      let added=0, updated=0;
+      rows.forEach(r=>{
+        const name = (r[0]||'').trim();
+        if(!name) return;
+        const nameUrdu = (r[1]||'').trim();
+        const code = (r[2]||'').trim();
+        const unit = (r[3]||'Pcs').trim() || 'Pcs';
+        const purchasePrice = Number(r[4])||0;
+        const salePrice = Number(r[5])||0;
+        const minStock = Number(r[6])||0;
+        let it = DB.items.find(i=> (code && i.code===code) || i.name.toLowerCase()===name.toLowerCase());
+        if(it){
+          Object.assign(it, {name, nameUrdu, code, unit, purchasePrice, salePrice, minStock});
+          updated++;
+        } else {
+          const openingStockByStore = {};
+          DB.stores.forEach(st=> openingStockByStore[st.id]=0);
+          DB.items.push({ id:uid(), name, nameUrdu, code, unit, purchasePrice, salePrice, minStock, openingStockByStore });
+          added++;
+        }
+      });
+      saveDB();
+      UI.renderItems(); UI.refreshDropdowns();
+      UI.toast(`${added} items add, ${updated} update ho gaye`,'success');
+      document.getElementById('itemImportFile').value='';
+    });
+  },
+  importCustomers(){
+    const file = document.getElementById('custImportFile').files[0];
+    if(!file){ UI.toast('File chunein','error'); return; }
+    this.fileToRows(file, rows=>{
+      rows = this.stripHeader(rows, ['name','customer','customer name']);
+      let added=0, updated=0;
+      rows.forEach(r=>{
+        const name = (r[0]||'').trim();
+        if(!name) return;
+        const phone = (r[1]||'').trim();
+        const address = (r[2]||'').trim();
+        const openingBalance = Number(r[3])||0;
+        let c = DB.customers.find(x=> x.name.toLowerCase()===name.toLowerCase());
+        if(c){ Object.assign(c, {phone, address}); updated++; }
+        else { DB.customers.push({id:uid(), name, phone, address, openingBalance}); added++; }
+      });
+      saveDB();
+      UI.renderCustomers(); UI.refreshDropdowns();
+      UI.toast(`${added} customers add, ${updated} update ho gaye`,'success');
+      document.getElementById('custImportFile').value='';
+    });
+  },
+  importSuppliers(){
+    const file = document.getElementById('suppImportFile').files[0];
+    if(!file){ UI.toast('File chunein','error'); return; }
+    this.fileToRows(file, rows=>{
+      rows = this.stripHeader(rows, ['name','supplier','supplier name']);
+      let added=0, updated=0;
+      rows.forEach(r=>{
+        const name = (r[0]||'').trim();
+        if(!name) return;
+        const phone = (r[1]||'').trim();
+        const address = (r[2]||'').trim();
+        const openingBalance = Number(r[3])||0;
+        let s = DB.suppliers.find(x=> x.name.toLowerCase()===name.toLowerCase());
+        if(s){ Object.assign(s, {phone, address}); updated++; }
+        else { DB.suppliers.push({id:uid(), name, phone, address, openingBalance}); added++; }
+      });
+      saveDB();
+      UI.renderSuppliers(); UI.refreshDropdowns();
+      UI.toast(`${added} suppliers add, ${updated} update ho gaye`,'success');
+      document.getElementById('suppImportFile').value='';
+    });
+  }
+};
+
+UI.init();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function(err){
+      console.log('SW registration failed (needs https/localhost hosting):', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
