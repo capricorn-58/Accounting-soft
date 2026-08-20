@@ -1,1 +1,534 @@
+<!DOCTYPE html>
+<html lang="ur" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#164a6e">
+<title>Salesman App - Order &amp; Recovery</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Salesman App">
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --primary:#1e5f8c; --primary-dark:#164a6e; --accent:#2e8b57;
+    --danger:#c0392b; --warn:#d68910; --bg:#f4f6f8; --card:#ffffff;
+    --border:#e0e4e8; --text:#1f2d3a; --text-light:#6b7683;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; font-family:'Segoe UI', Tahoma, Arial, sans-serif;
+    background:var(--bg); color:var(--text); font-size:15px;
+    padding-bottom:70px;
+  }
+  header{
+    background:var(--primary-dark); color:#fff; padding:14px 16px;
+    display:flex; justify-content:space-between; align-items:center;
+    position:sticky; top:0; z-index:20;
+  }
+  header .title{font-size:16px; font-weight:700;}
+  header .title small{display:block; font-weight:400; font-size:11px; opacity:.8;}
+  header button{background:rgba(255,255,255,.15); color:#fff; border:none; padding:7px 10px; border-radius:6px; font-size:12px;}
 
+  #main{padding:14px; max-width:520px; margin:0 auto;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  .card{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:14px; box-shadow:0 1px 2px rgba(0,0,0,.04);}
+  .card h2{font-size:15px; margin:0 0 12px; padding-bottom:8px; border-bottom:1px solid var(--border);}
+
+  label{display:block; font-size:12.5px; color:var(--text-light); margin-bottom:4px; font-weight:600;}
+  input, select, textarea{
+    width:100%; padding:11px 10px; border:1px solid var(--border); border-radius:8px;
+    font-size:15px; margin-bottom:12px; background:#fff; color:var(--text);
+  }
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--primary); border-color:var(--primary);}
+
+  button.primary, button.big{
+    width:100%; background:var(--primary); color:#fff; border:none; padding:13px;
+    border-radius:9px; font-size:15.5px; font-weight:700; cursor:pointer;
+  }
+  button.primary:active, button.big:active{background:var(--primary-dark);}
+  button.secondary{background:#fff; color:var(--primary); border:1px solid var(--primary);}
+  button.ghost{background:transparent; border:1px solid var(--border); color:var(--text); padding:9px 12px; border-radius:8px; font-size:13px;}
+  button.danger{background:var(--danger); color:#fff; border:none;}
+  button.small{padding:8px 10px; font-size:13px; width:auto;}
+
+  .itemRow{display:flex; gap:8px; align-items:flex-end; margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed var(--border);}
+  .itemRow .grow{flex:1;}
+  .itemRow input{margin-bottom:0;}
+  .qtyRate{display:flex; gap:8px;}
+  .qtyRate input{width:70px;}
+
+  .totalBar{
+    display:flex; justify-content:space-between; align-items:center;
+    background:#eef4f8; border-radius:8px; padding:12px 14px; margin:10px 0 14px; font-size:17px; font-weight:700;
+  }
+  .totalBar span.amt{color:var(--primary);}
+
+  #bottomNav{
+    position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--border);
+    display:flex; z-index:30; box-shadow:0 -1px 4px rgba(0,0,0,.05);
+  }
+  #bottomNav .navbtn{
+    flex:1; text-align:center; padding:9px 4px 8px; font-size:11.5px; color:var(--text-light);
+    display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer;
+  }
+  #bottomNav .navbtn .ic{font-size:20px;}
+  #bottomNav .navbtn.active{color:var(--primary); font-weight:700;}
+
+  .histItem{border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:8px; font-size:13.5px;}
+  .histItem .top{display:flex; justify-content:space-between; font-weight:600;}
+  .badge{padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700;}
+  .badge.pending{background:#fdf1de; color:var(--warn);}
+  .badge.approved{background:#e5f4ec; color:var(--accent);}
+  .badge.rejected{background:#fbe9e7; color:var(--danger);}
+
+  .muted{color:var(--text-light); font-size:13px;}
+  .toast{
+    position:fixed; bottom:78px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:#1f2d3a; color:#fff; padding:10px 18px; border-radius:20px; font-size:13.5px;
+    opacity:0; transition:.25s; z-index:100; pointer-events:none; max-width:90%; text-align:center;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  #loginScreen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  #loginScreen .box{max-width:360px; width:100%; text-align:center;}
+  #loginScreen .logo{font-size:44px; margin-bottom:6px;}
+  #loginScreen h1{font-size:19px; margin:0 0 4px;}
+  #loginScreen p.tag{color:var(--text-light); font-size:13px; margin-bottom:20px;}
+
+  .autocomplete{position:relative;}
+  .ac-list{
+    position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid var(--border);
+    border-radius:8px; max-height:200px; overflow-y:auto; z-index:40; box-shadow:0 4px 10px rgba(0,0,0,.1); display:none;
+  }
+  .ac-list.show{display:block;}
+  .ac-item{padding:10px 12px; border-bottom:1px solid var(--border); font-size:14px; cursor:pointer;}
+  .ac-item:active{background:#eef4f8;}
+  .ac-item:last-child{border-bottom:none;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="box">
+    <div class="logo">🏍️</div>
+    <h1>Salesman App</h1>
+    <p class="tag">Order aur Recovery — Market Se Seedha</p>
+    <button id="installBtn" class="secondary" style="display:none;margin-bottom:14px;" onclick="PWA.install()">⬇️ App Install Karein (Home Screen Par)</button>
+    <div class="card" style="text-align:left;">
+      <label>Email</label>
+      <input type="text" id="loginEmail" placeholder="aapka.email@example.com" autocomplete="username">
+      <label>Password</label>
+      <input type="password" id="loginPassword" autocomplete="current-password">
+      <button class="primary" onclick="Auth.login()">Login</button>
+      <p class="muted" id="loginError" style="color:var(--danger); margin-top:10px;"></p>
+    </div>
+    <p class="muted">Account na ho to shop owner se apna email/password lein.</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell" style="display:none;">
+  <header>
+    <div class="title">🏍️ <span id="salesmanNameLabel">Salesman</span><small id="todayLabel"></small></div>
+    <div style="display:flex;gap:6px;">
+      <button id="installBtnApp" style="display:none;" onclick="PWA.install()">⬇️ Install</button>
+      <button onclick="Auth.logout()">Logout</button>
+    </div>
+  </header>
+
+  <div id="main">
+
+    <!-- ORDER SCREEN -->
+    <div class="screen active" id="screen-order">
+      <div class="card">
+        <h2>🧾 Naya Order</h2>
+        <label>Customer</label>
+        <div class="autocomplete">
+          <input type="text" id="ordCustomerSearch" placeholder="Customer ka naam likhein..." autocomplete="off" oninput="Order.searchCustomer(this.value)">
+          <div class="ac-list" id="ordCustList"></div>
+        </div>
+        <input type="hidden" id="ordCustomerId">
+        <div id="ordCustSelected" class="muted"></div>
+      </div>
+
+      <div class="card">
+        <h2>📦 Items</h2>
+        <div id="ordItemRows"></div>
+        <button class="secondary small" onclick="Order.addRow()">➕ Item Add Karein</button>
+        <div class="totalBar">Total <span class="amt" id="ordTotal">Rs 0</span></div>
+        <label>Note (optional)</label>
+        <textarea id="ordNote" rows="2" placeholder="Koi note..."></textarea>
+        <button class="primary big" onclick="Order.submit()">✅ Order Bhej Dein</button>
+      </div>
+    </div>
+
+    <!-- RECOVERY SCREEN -->
+    <div class="screen" id="screen-recovery">
+      <div class="card">
+        <h2>💰 Recovery Entry</h2>
+        <label>Customer</label>
+        <div class="autocomplete">
+          <input type="text" id="recCustomerSearch" placeholder="Customer ka naam likhein..." autocomplete="off" oninput="Recovery.searchCustomer(this.value)">
+          <div class="ac-list" id="recCustList"></div>
+        </div>
+        <input type="hidden" id="recCustomerId">
+        <div id="recCustSelected" class="muted"></div>
+
+        <label>Wasool Shuda Raqam (Rs)</label>
+        <input type="number" id="recAmount" placeholder="0">
+
+        <label>Method</label>
+        <select id="recMethod">
+          <option value="Cash">Cash</option>
+          <option value="Online">Online / Bank Transfer</option>
+          <option value="Cheque">Cheque</option>
+        </select>
+
+        <label>Note (optional)</label>
+        <textarea id="recNote" rows="2" placeholder="Koi note..."></textarea>
+        <button class="primary big" onclick="Recovery.submit()">✅ Recovery Bhej Dein</button>
+      </div>
+    </div>
+
+    <!-- HISTORY SCREEN -->
+    <div class="screen" id="screen-history">
+      <div class="card">
+        <h2>📋 Meri History (Aaj)</h2>
+        <div id="histList"><p class="muted">Loading...</p></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="bottomNav">
+    <div class="navbtn active" data-screen="order" onclick="App.switchScreen('order')"><span class="ic">🧾</span>Order</div>
+    <div class="navbtn" data-screen="recovery" onclick="App.switchScreen('recovery')"><span class="ic">💰</span>Recovery</div>
+    <div class="navbtn" data-screen="history" onclick="App.switchScreen('history')"><span class="ic">📋</span>History</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- Firebase ---------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyAQHLIzhAtHxtj2hX9CQ-vBb-6691J-q34",
+  authDomain: "accunting-software.firebaseapp.com",
+  projectId: "accunting-software",
+  storageBucket: "accunting-software.firebasestorage.app",
+  messagingSenderId: "875590036208",
+  appId: "1:875590036208:web:541d579a557423a6b0f035"
+};
+firebase.initializeApp(firebaseConfig);
+firebase.firestore().enablePersistence({synchronizeTabs:true}).catch(()=>{});
+const fbAuth = firebase.auth();
+const fbDB = firebase.firestore();
+
+function fmt(n){ return (Number(n)||0).toLocaleString('en-IN'); }
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2400);
+}
+
+/* ---------------- Auth ---------------- */
+const Auth = {
+  uid:null, name:'',
+  login(){
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPassword').value;
+    document.getElementById('loginError').textContent = '';
+    if(!email || !pass){ document.getElementById('loginError').textContent = 'Email aur Password likhein'; return; }
+    fbAuth.signInWithEmailAndPassword(email, pass).catch(err=>{
+      document.getElementById('loginError').textContent = 'Login fail: '+err.message;
+    });
+  },
+  logout(){ fbAuth.signOut(); },
+  init(){
+    fbAuth.onAuthStateChanged(async user=>{
+      if(user){
+        this.uid = user.uid;
+        document.getElementById('loginScreen').style.display='none';
+        document.getElementById('appShell').style.display='block';
+        document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+        await this.loadOrAskProfile(user);
+        Data.loadMasterData();
+        History.listen();
+      } else {
+        this.uid = null;
+        document.getElementById('loginScreen').style.display='flex';
+        document.getElementById('appShell').style.display='none';
+      }
+    });
+  },
+  async loadOrAskProfile(user){
+    const doc = await fbDB.collection('salesmen').doc(user.uid).get();
+    if(doc.exists && doc.data().name){
+      this.name = doc.data().name;
+    } else {
+      let n = '';
+      while(!n){ n = (prompt('Apna naam likhein (customer/owner ko yahi naam dikhega):')||'').trim(); }
+      this.name = n;
+      await fbDB.collection('salesmen').doc(user.uid).set({name:n, email:user.email});
+    }
+    document.getElementById('salesmanNameLabel').textContent = this.name;
+  }
+};
+
+/* ---------------- Master Data (customers/items synced from main system) ---------------- */
+const Data = {
+  customers:[], items:[],
+  loadMasterData(){
+    fbDB.collection('customers').onSnapshot(snap=>{
+      this.customers = snap.docs.map(d=> d.data());
+    });
+    fbDB.collection('items').onSnapshot(snap=>{
+      this.items = snap.docs.map(d=> d.data());
+    });
+  }
+};
+
+/* ---------------- Screen switching ---------------- */
+const App = {
+  switchScreen(name){
+    document.querySelectorAll('.screen').forEach(s=> s.classList.remove('active'));
+    document.getElementById('screen-'+name).classList.add('active');
+    document.querySelectorAll('.navbtn').forEach(n=> n.classList.remove('active'));
+    document.querySelector('.navbtn[data-screen="'+name+'"]').classList.add('active');
+  }
+};
+
+/* ---------------- Order ---------------- */
+let ordRowCount = 0;
+const Order = {
+  searchCustomer(q){
+    const list = document.getElementById('ordCustList');
+    if(!q){ list.classList.remove('show'); return; }
+    const matches = Data.customers.filter(c=> c.name && c.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+    if(matches.length===0){ list.innerHTML = '<div class="ac-item muted">Koi customer nahi mila</div>'; list.classList.add('show'); return; }
+    list.innerHTML = matches.map(c=> `<div class="ac-item" onclick="Order.pickCustomer('${c.id}','${(c.name||'').replace(/'/g,"\\'")}')">${c.name} ${c.phone?('— '+c.phone):''}</div>`).join('');
+    list.classList.add('show');
+  },
+  pickCustomer(id, name){
+    document.getElementById('ordCustomerId').value = id;
+    document.getElementById('ordCustomerSearch').value = name;
+    document.getElementById('ordCustSelected').textContent = '✅ Selected: '+name;
+    document.getElementById('ordCustList').classList.remove('show');
+  },
+  addRow(){
+    ordRowCount++;
+    const rid = 'r'+ordRowCount;
+    const wrap = document.getElementById('ordItemRows');
+    const div = document.createElement('div');
+    div.className = 'itemRow';
+    div.id = rid;
+    div.innerHTML = `
+      <div class="grow autocomplete">
+        <input type="text" placeholder="Item ka naam likhein..." autocomplete="off" oninput="Order.searchItem('${rid}', this.value)">
+        <div class="ac-list" id="${rid}_list"></div>
+        <input type="hidden" class="itemId">
+      </div>
+      <div class="qtyRate">
+        <input type="number" class="qty" placeholder="Qty" value="1" oninput="Order.calcTotal()">
+        <input type="number" class="rate" placeholder="Rate" oninput="Order.calcTotal()">
+      </div>
+      <button class="ghost" onclick="document.getElementById('${rid}').remove(); Order.calcTotal();">✕</button>
+    `;
+    wrap.appendChild(div);
+  },
+  searchItem(rid, q){
+    const list = document.getElementById(rid+'_list');
+    if(!q){ list.classList.remove('show'); return; }
+    const matches = Data.items.filter(it=> it.name && it.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+    if(matches.length===0){ list.innerHTML = '<div class="ac-item muted">Koi item nahi mila</div>'; list.classList.add('show'); return; }
+    list.innerHTML = matches.map(it=> `<div class="ac-item" onclick="Order.pickItem('${rid}','${it.id}','${(it.name||'').replace(/'/g,"\\'")}',${it.salePrice||0})">${it.name} ${it.nameUrdu?('('+it.nameUrdu+')'):''} — Rs${fmt(it.salePrice)}</div>`).join('');
+    list.classList.add('show');
+  },
+  pickItem(rid, id, name, price){
+    const row = document.getElementById(rid);
+    row.querySelector('input[type=text]').value = name;
+    row.querySelector('.itemId').value = id;
+    row.querySelector('.rate').value = price;
+    document.getElementById(rid+'_list').classList.remove('show');
+    this.calcTotal();
+  },
+  calcTotal(){
+    let total = 0;
+    document.querySelectorAll('#ordItemRows .itemRow').forEach(row=>{
+      const qty = Number(row.querySelector('.qty').value)||0;
+      const rate = Number(row.querySelector('.rate').value)||0;
+      total += qty*rate;
+    });
+    document.getElementById('ordTotal').textContent = 'Rs '+fmt(total);
+    return total;
+  },
+  submit(){
+    const customerId = document.getElementById('ordCustomerId').value;
+    const customerName = document.getElementById('ordCustomerSearch').value.trim();
+    if(!customerName){ toast('Customer select karein'); return; }
+    const items = [];
+    document.querySelectorAll('#ordItemRows .itemRow').forEach(row=>{
+      const name = row.querySelector('input[type=text]').value.trim();
+      const itemId = row.querySelector('.itemId').value;
+      const qty = Number(row.querySelector('.qty').value)||0;
+      const rate = Number(row.querySelector('.rate').value)||0;
+      if(name && qty>0){ items.push({itemId, name, qty, rate}); }
+    });
+    if(items.length===0){ toast('Kam az kam ek item add karein'); return; }
+    const btn = event.target; btn.disabled = true; btn.textContent = 'Bhej rahe hain...';
+    fbDB.collection('salesmanOrders').add({
+      salesmanUid: Auth.uid, salesmanName: Auth.name,
+      customerId: customerId||null, customerName,
+      items, note: document.getElementById('ordNote').value.trim(),
+      status:'pending', createdAt: Date.now()
+    }).then(()=>{
+      toast('✅ Order bhej diya gaya');
+      document.getElementById('ordItemRows').innerHTML='';
+      document.getElementById('ordCustomerSearch').value='';
+      document.getElementById('ordCustomerId').value='';
+      document.getElementById('ordCustSelected').textContent='';
+      document.getElementById('ordNote').value='';
+      this.calcTotal();
+      this.addRow();
+    }).catch(err=> toast('Fail: '+err.message))
+      .finally(()=>{ btn.disabled=false; btn.textContent='✅ Order Bhej Dein'; });
+  }
+};
+Order.addRow();
+
+/* ---------------- Recovery ---------------- */
+const Recovery = {
+  searchCustomer(q){
+    const list = document.getElementById('recCustList');
+    if(!q){ list.classList.remove('show'); return; }
+    const matches = Data.customers.filter(c=> c.name && c.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+    if(matches.length===0){ list.innerHTML = '<div class="ac-item muted">Koi customer nahi mila</div>'; list.classList.add('show'); return; }
+    list.innerHTML = matches.map(c=> `<div class="ac-item" onclick="Recovery.pickCustomer('${c.id}','${(c.name||'').replace(/'/g,"\\'")}')">${c.name} ${c.phone?('— '+c.phone):''}</div>`).join('');
+    list.classList.add('show');
+  },
+  pickCustomer(id, name){
+    document.getElementById('recCustomerId').value = id;
+    document.getElementById('recCustomerSearch').value = name;
+    document.getElementById('recCustSelected').textContent = '✅ Selected: '+name;
+    document.getElementById('recCustList').classList.remove('show');
+  },
+  submit(){
+    const customerId = document.getElementById('recCustomerId').value;
+    const customerName = document.getElementById('recCustomerSearch').value.trim();
+    const amount = Number(document.getElementById('recAmount').value)||0;
+    if(!customerName){ toast('Customer select karein'); return; }
+    if(amount<=0){ toast('Amount likhein'); return; }
+    const btn = event.target; btn.disabled = true; btn.textContent = 'Bhej rahe hain...';
+    fbDB.collection('recoveries').add({
+      salesmanUid: Auth.uid, salesmanName: Auth.name,
+      customerId: customerId||null, customerName,
+      amount, method: document.getElementById('recMethod').value,
+      note: document.getElementById('recNote').value.trim(),
+      status:'pending', createdAt: Date.now()
+    }).then(()=>{
+      toast('✅ Recovery bhej di gayi');
+      document.getElementById('recCustomerSearch').value='';
+      document.getElementById('recCustomerId').value='';
+      document.getElementById('recCustSelected').textContent='';
+      document.getElementById('recAmount').value='';
+      document.getElementById('recNote').value='';
+    }).catch(err=> toast('Fail: '+err.message))
+      .finally(()=>{ btn.disabled=false; btn.textContent='✅ Recovery Bhej Dein'; });
+  }
+};
+
+/* ---------------- History ---------------- */
+const History = {
+  listen(){
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    fbDB.collection('salesmanOrders').where('salesmanUid','==',Auth.uid)
+      .onSnapshot(snap=>{
+        this.orders = snap.docs.map(d=> ({...d.data(), kind:'order'})).filter(o=> o.createdAt >= todayStart.getTime());
+        this.render();
+      });
+    fbDB.collection('recoveries').where('salesmanUid','==',Auth.uid)
+      .onSnapshot(snap=>{
+        this.recoveries = snap.docs.map(d=> ({...d.data(), kind:'recovery'})).filter(r=> r.createdAt >= todayStart.getTime());
+        this.render();
+      });
+  },
+  orders:[], recoveries:[],
+  render(){
+    const all = [...(this.orders||[]), ...(this.recoveries||[])].sort((a,b)=> b.createdAt-a.createdAt);
+    const el = document.getElementById('histList');
+    if(all.length===0){ el.innerHTML = '<p class="muted">Aaj koi order/recovery nahi</p>'; return; }
+    el.innerHTML = all.map(x=>{
+      const badge = `<span class="badge ${x.status}">${x.status==='pending'?'Pending':x.status==='approved'?'Approved':'Rejected'}</span>`;
+      if(x.kind==='order'){
+        const total = (x.items||[]).reduce((s,li)=> s+(li.qty*li.rate),0);
+        return `<div class="histItem"><div class="top">🧾 ${x.customerName} ${badge}</div>
+          <div>${(x.items||[]).length} item(s) — Rs ${fmt(total)}</div>
+          <div class="muted">${new Date(x.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div></div>`;
+      } else {
+        return `<div class="histItem"><div class="top">💰 ${x.customerName} ${badge}</div>
+          <div>Rs ${fmt(x.amount)} — ${x.method}</div>
+          <div class="muted">${new Date(x.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div></div>`;
+      }
+    }).join('');
+  }
+};
+
+// close autocomplete lists when tapping elsewhere
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.autocomplete')){
+    document.querySelectorAll('.ac-list').forEach(l=> l.classList.remove('show'));
+  }
+});
+
+Auth.init();
+
+/* ---------------- PWA install (Android "Add to Home Screen") ---------------- */
+const PWA = {
+  deferredPrompt: null,
+  init(){
+    window.addEventListener('beforeinstallprompt', (e)=>{
+      e.preventDefault();
+      this.deferredPrompt = e;
+      const b1 = document.getElementById('installBtn');
+      const b2 = document.getElementById('installBtnApp');
+      if(b1) b1.style.display = 'block';
+      if(b2) b2.style.display = 'inline-block';
+    });
+    window.addEventListener('appinstalled', ()=>{
+      const b1 = document.getElementById('installBtn');
+      const b2 = document.getElementById('installBtnApp');
+      if(b1) b1.style.display = 'none';
+      if(b2) b2.style.display = 'none';
+      this.deferredPrompt = null;
+      toast('✅ App install ho gayi');
+    });
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('sw.js').catch(err=> console.warn('SW register failed', err));
+    }
+  },
+  async install(){
+    if(!this.deferredPrompt){
+      toast('Browser ke ⋮ menu se "Add to Home Screen" / "Install App" choose karein');
+      return;
+    }
+    this.deferredPrompt.prompt();
+    await this.deferredPrompt.userChoice;
+    this.deferredPrompt = null;
+  }
+};
+PWA.init();
+</script>
+</body>
+</html>
